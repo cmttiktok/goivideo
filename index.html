@@ -2,115 +2,98 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Call Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mina Video Call</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
+        :root { --neon: #00f2ff; --glass: rgba(255, 255, 255, 0.1); }
         body {
-            margin: 0;
-            background: radial-gradient(circle, #1e3a8a, #000000);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: white;
+            margin: 0; background: #0a0a0a; color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex; align-items: center; justify-content: center; min-height: 100vh;
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-            width: 90%;
-            max-width: 900px;
+        .app-container {
+            width: 95%; max-width: 500px; background: var(--glass);
+            backdrop-filter: blur(20px); border-radius: 25px;
+            padding: 20px; border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
         }
-        h2 { color: #00f2ff; text-shadow: 0 0 10px #00f2ff; }
-        .video-container {
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            margin: 20px 0;
+        h2 { color: var(--neon); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        .id-badge {
+            background: rgba(0, 242, 255, 0.1); padding: 10px;
+            border-radius: 12px; border: 1px dashed var(--neon);
+            margin: 15px 0; display: inline-block;
         }
+        #my-id { font-size: 24px; font-weight: bold; color: var(--neon); letter-spacing: 3px; }
+        
+        .video-grid { display: grid; gap: 15px; margin: 20px 0; }
         video {
-            width: 45%;
-            min-width: 300px;
-            background: #111;
-            border-radius: 15px;
-            border: 2px solid #00f2ff;
-            box-shadow: 0 0 15px #00f2ff;
-            margin-bottom: 10px;
+            width: 100%; border-radius: 15px; background: #000;
+            object-fit: cover; border: 1px solid rgba(255,255,255,0.2);
+            height: 200px; /* Chiều cao cố định cho mobile */
         }
+        #remote-video { border: 2px solid var(--neon); box-shadow: 0 0 15px var(--neon); height: 250px; }
+
+        .input-group { display: flex; flex-direction: column; gap: 10px; }
         input {
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            width: 200px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            outline: none;
-            border-bottom: 2px solid #00f2ff;
+            padding: 15px; border-radius: 12px; border: none;
+            background: rgba(255,255,255,0.05); color: white;
+            font-size: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.2);
         }
         button {
-            padding: 12px 25px;
-            border-radius: 8px;
-            border: none;
-            background: #00f2ff;
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
+            padding: 15px; border-radius: 12px; border: none;
+            background: var(--neon); color: #000; font-weight: bold;
+            font-size: 16px; cursor: pointer; transition: 0.3s;
         }
-        button:hover {
-            box-shadow: 0 0 20px #00f2ff;
-            transform: translateY(-2px);
-        }
-        #my-id { font-size: 1.2em; color: #ff007b; text-shadow: 0 0 5px #ff007b; }
+        button:active { transform: scale(0.95); opacity: 0.8; }
+        .footer-text { font-size: 12px; opacity: 0.5; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="glass-card">
-        <h2>MINA VIDEO CALL</h2>
-        <p>ID của bạn: <span id="my-id">Đang khởi tạo...</span></p>
+    <div class="app-container">
+        <h2>MINA CALL</h2>
         
-        <div class="controls">
-            <input type="text" id="remote-id" placeholder="Dán ID người nhận...">
-            <button onclick="makeCall()">Bắt đầu gọi</button>
+        <div class="id-badge">
+            <div style="font-size: 12px; opacity: 0.8;">MÃ CỦA BẠN</div>
+            <div id="my-id">...</div>
+        </div>
+        
+        <div class="input-group">
+            <input type="number" id="remote-id" placeholder="Nhập mã 6 số đối phương" pattern="\d*">
+            <button onclick="makeCall()">GỌI VIDEO NGAY</button>
         </div>
 
-        <div class="video-container">
-            <video id="local-video" autoplay muted></video>
-            <video id="remote-video" autoplay></video>
+        <div class="video-grid">
+            <video id="remote-video" autoplay playsinline></video>
+            <video id="local-video" autoplay muted playsinline></video>
         </div>
-        <p style="font-size: 0.8em; opacity: 0.6;">Dành cho Tùng Anh - Computer Service</p>
+
+        <div class="footer-text">Tùng Anh Computer Service - 2026</div>
     </div>
 
     <script>
-        const peer = new Peer(); 
+        // Tạo ID ngẫu nhiên 6 chữ số
+        const customId = Math.floor(100000 + Math.random() * 900000).toString();
+        const peer = new Peer(customId); 
         let localStream;
 
-        // 1. Lấy ID cá nhân
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
         });
 
-        // 2. Mở Camera và Mic
+        // Tối ưu cho Mobile: thêm playsinline để video không tự bung toàn màn hình trên iOS
         navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             .then(stream => {
                 localStream = stream;
                 document.getElementById('local-video').srcObject = stream;
             })
             .catch(err => {
-                alert("Vui lòng cho phép truy cập camera/mic!");
-                console.error(err);
+                alert("Bạn cần cấp quyền Camera & Mic để gọi điện!");
             });
 
-        // 3. Xử lý khi có người khác gọi đến
         peer.on('call', call => {
-            if(confirm("Có cuộc gọi đến, bạn có muốn nghe không?")) {
+            if(confirm("Có cuộc gọi đến từ mã " + call.peer + ". Nhận không?")) {
                 call.answer(localStream);
                 call.on('stream', remoteStream => {
                     document.getElementById('remote-video').srcObject = remoteStream;
@@ -118,10 +101,9 @@
             }
         });
 
-        // 4. Hàm thực hiện cuộc gọi
         function makeCall() {
             const destId = document.getElementById('remote-id').value;
-            if(!destId) return alert("Hãy nhập ID đối phương!");
+            if(!destId || destId.length < 6) return alert("Vui lòng nhập đúng mã 6 số!");
             
             const call = peer.call(destId, localStream);
             call.on('stream', remoteStream => {
