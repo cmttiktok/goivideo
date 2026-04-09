@@ -3,59 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mina OTT - 4G Connection Fixed</title>
+    <title>Mina OTT - Video & Audio Full Fix</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --neon: #00f2ff; --glass: rgba(255, 255, 255, 0.1); }
-        body { margin: 0; background: #000; color: white; font-family: sans-serif; overflow: hidden; height: 100vh; }
+        :root { --neon: #00f2ff; --accent: #ff007b; }
+        body { margin: 0; background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; height: 100vh; }
         
-        /* Video lồng nhau */
-        .video-wrapper { position: relative; width: 100vw; height: 50vh; background: #111; border-bottom: 1px solid #333; }
+        /* Giao diện Video */
+        .video-wrapper { position: relative; width: 100vw; height: 50vh; background: #111; border-bottom: 1px solid #222; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
         #local-video { 
-            position: absolute; top: 10px; right: 10px; width: 95px; height: 130px; 
+            position: absolute; top: 10px; right: 10px; width: 100px; height: 140px; 
             border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10;
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
         }
 
-        /* Thanh điều khiển */
+        /* Nút điều khiển */
         .controls { 
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 15px; z-index: 20;
+            display: flex; gap: 12px; z-index: 20;
         }
         .btn-round { 
-            width: 48px; height: 48px; border-radius: 50%; border: none; 
-            display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px;
-            transition: 0.3s;
+            width: 50px; height: 50px; border-radius: 50%; border: none; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 22px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         .btn-call { background: #22c55e; color: white; }
         .btn-end { background: #ef4444; color: white; }
-        .btn-util { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); }
+        .btn-util { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
 
-        /* Chat OTT */
-        .chat-section { 
-            height: 50vh; background: #0a0a0a; display: flex; flex-direction: column;
-        }
+        /* Giao diện Chat */
+        .chat-section { height: 50vh; background: #0a0a0a; display: flex; flex-direction: column; }
         #chat-box { flex: 1; overflow-y: auto; padding: 15px; font-size: 14px; display: flex; flex-direction: column; }
-        .msg { margin-bottom: 10px; padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; }
+        .msg { margin-bottom: 10px; padding: 10px 14px; border-radius: 18px; max-width: 80%; word-wrap: break-word; }
         .msg.me { background: #007aff; align-self: flex-end; }
         .msg.peer { background: #26262b; align-self: flex-start; }
-        .msg img { max-width: 100%; border-radius: 10px; margin-top: 5px; }
+        .msg img { max-width: 100%; border-radius: 10px; margin-top: 5px; display: block; }
 
-        .input-area { padding: 10px; display: flex; gap: 8px; background: #111; border-top: 1px solid #222; }
-        input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: none; background: #222; color: white; outline: none; }
+        .input-area { padding: 10px; display: flex; gap: 8px; background: #111; align-items: center; border-top: 1px solid #222; }
+        input[type="text"] { flex: 1; padding: 12px 18px; border-radius: 25px; border: none; background: #222; color: white; outline: none; font-size: 16px; }
         
         .id-bar { 
             position: absolute; top: 10px; left: 10px; z-index: 20; font-size: 11px; 
-            background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--neon); 
+            background: rgba(0,0,0,0.8); padding: 6px 15px; border-radius: 20px; border: 1px solid var(--neon); 
         }
     </style>
 </head>
 <body>
 
     <div class="id-bar">
-        MÃ CỦA BẠN: <span id="my-id" style="color:var(--neon); font-weight:bold;">...</span> | 
-        <input id="peer-id-input" type="number" placeholder="Nhập mã gọi..." style="width: 85px; background: transparent; color: #ff007b; border: none; outline: none; font-weight: bold;">
+        MY ID: <span id="my-id" style="color:var(--neon); font-weight:bold;">...</span> | 
+        <input id="peer-id-input" type="number" placeholder="ID đối phương" style="width: 80px; background: transparent; color: var(--accent); border: none; outline: none; font-weight: bold;">
     </div>
 
     <div class="video-wrapper">
@@ -73,9 +71,9 @@
     <div class="chat-section">
         <div id="chat-box"></div>
         <div class="input-area">
-            <label style="cursor: pointer; padding: 5px;">🖼️<input type="file" id="file-input" hidden accept="image/*"></label>
-            <input type="text" id="chat-input" placeholder="Nhập tin nhắn...">
-            <button onclick="sendMsg()" style="background:none; border:none; color:var(--neon); font-size: 24px;">🚀</button>
+            <label style="cursor: pointer; padding: 5px; font-size: 20px;">🖼️<input type="file" id="file-input" hidden accept="image/*"></label>
+            <input type="text" id="chat-input" placeholder="Nhắn tin cho bạn bè...">
+            <button onclick="sendMsg()" style="background:none; border:none; color:var(--neon); font-size: 26px;">🚀</button>
         </div>
     </div>
 
@@ -98,6 +96,7 @@
                         credential: '/I2NIZRvuJHzUMFI' 
                     }
                 ],
+                'iceCandidatePoolSize': 10,
                 'sdpSemantics': 'unified-plan'
             }
         });
@@ -106,22 +105,25 @@
 
         peer.on('open', id => document.getElementById('my-id').innerText = id);
 
-        // Khởi tạo Camera ngay khi mở web
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+        // Chuẩn bị Camera và Micro (Rất quan trọng)
+        navigator.mediaDevices.getUserMedia({ 
+            video: { width: { ideal: 640 }, height: { ideal: 480 } }, 
+            audio: { echoCancellation: true, noiseSuppression: true } 
+        }).then(stream => {
             localStream = stream;
             document.getElementById('local-video').srcObject = stream;
-        }).catch(err => alert("Vui lòng cấp quyền Camera/Mic để gọi!"));
+        }).catch(err => alert("Lỗi: Bạn chưa cấp quyền Camera/Micro!"));
 
-        // Nhận cuộc gọi
+        // Khi có cuộc gọi đến
         peer.on('call', call => {
-            if(confirm("Có cuộc gọi đến từ " + call.peer)) {
+            if(confirm("Có cuộc gọi mới! Bạn muốn trả lời chứ?")) {
                 currentCall = call;
                 call.answer(localStream);
                 setupRemoteStream(call);
             }
         });
 
-        // Nhận kết nối chat
+        // Khi có kết nối dữ liệu (Chat)
         peer.on('connection', conn => {
             dataConn = conn;
             setupDataListeners();
@@ -129,7 +131,7 @@
 
         function makeCall() {
             const id = document.getElementById('peer-id-input').value;
-            if(!id) return alert("Vui lòng nhập mã đối phương!");
+            if(!id) return alert("Vui lòng nhập ID người nhận!");
 
             dataConn = peer.connect(id);
             setupDataListeners();
@@ -138,14 +140,26 @@
             setupRemoteStream(currentCall);
         }
 
+        // HÀM XỬ LÝ VIDEO VÀ AUDIO (FIX LỖI MẤT TIẾNG)
         function setupRemoteStream(call) {
             call.on('stream', rs => {
                 const rv = document.getElementById('remote-video');
                 rv.srcObject = rs;
-                // Ép video chạy và xử lý lỗi tự động phát trên Mobile
-                rv.play().catch(() => {
-                    rv.muted = true;
-                    rv.play();
+
+                // Các thuộc tính bắt buộc cho Mobile
+                rv.setAttribute('autoplay', '');
+                rv.setAttribute('playsinline', '');
+                rv.setAttribute('webkit-playsinline', '');
+                
+                // Mẹo lách luật Autoplay của trình duyệt: Mute -> Play -> Unmute
+                rv.muted = true; 
+                rv.play().then(() => {
+                    setTimeout(() => {
+                        rv.muted = false; // Mở tiếng sau 1 giây khi hình đã lên
+                    }, 1000);
+                }).catch(e => {
+                    console.log("Trình duyệt yêu cầu tương tác để bật tiếng");
+                    // Hiện thông báo nếu cần thiết
                 });
             });
         }
@@ -187,7 +201,7 @@
         function appendImg(sender, src) {
             const div = document.createElement('div');
             div.className = `msg ${sender}`;
-            div.innerHTML = `<img src="${src}" style="max-width:100%; border-radius:10px;">`;
+            div.innerHTML = `<img src="${src}">`;
             const box = document.getElementById('chat-box');
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
@@ -200,18 +214,16 @@
         }
 
         function endCall() { 
-            if(currentCall) currentCall.close();
             location.reload(); 
         }
 
         function takeSnapshot() {
             const video = document.getElementById('remote-video');
-            if(!video.srcObject) return alert("Không có hình ảnh để chụp!");
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             const link = document.createElement('a');
-            link.download = `mina-capture-${Date.now()}.png`;
+            link.download = `mina-photo.png`;
             link.href = canvas.toDataURL();
             link.click();
         }
