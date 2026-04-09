@@ -3,25 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mina OTT - Connection Status Fix</title>
+    <title>Mina OTT - Final Connection Fix</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --neon: #00f2ff; --accent: #ff007b; --success: #22c55e; --warning: #f59e0b; --danger: #ef4444; }
+        :root { --neon: #00f2ff; --success: #22c55e; --warning: #f59e0b; --danger: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; color: white; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Thanh trạng thái kết nối */
-        #status-bar { 
-            background: var(--warning); color: #000; text-align: center; 
-            font-size: 12px; font-weight: bold; padding: 4px 0; transition: 0.3s;
-        }
+        #status-bar { background: var(--warning); color: #000; text-align: center; font-size: 12px; font-weight: bold; padding: 6px 0; z-index: 100; }
 
         .video-wrapper { position: relative; flex: 1; width: 100vw; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { 
-            position: absolute; top: 40px; right: 15px; width: 100px; height: 140px; 
-            border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10;
-        }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        #local-video { position: absolute; top: 15px; right: 15px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10; background: #222; }
 
         .controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 20; }
         .btn-round { width: 50px; height: 50px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
@@ -30,28 +23,25 @@
         .btn-util { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); }
         .btn-off { background: #555 !important; color: #ff4d4d !important; }
 
-        .chat-section { height: 38vh; background: #0a0a0a; display: flex; flex-direction: column; border-top: 1px solid #333; }
+        .chat-section { height: 35vh; background: #0a0a0a; display: flex; flex-direction: column; border-top: 1px solid #333; }
         #chat-box { flex: 1; overflow-y: auto; padding: 12px; font-size: 14px; display: flex; flex-direction: column; }
         .msg { margin-bottom: 8px; padding: 8px 14px; border-radius: 15px; max-width: 85%; }
         .msg.me { background: #007aff; align-self: flex-end; }
         .msg.peer { background: #26262b; align-self: flex-start; }
 
         .input-area { padding: 10px; display: flex; gap: 8px; background: #111; align-items: center; }
-        input[type="text"] { flex: 1; padding: 10px 15px; border-radius: 20px; border: none; background: #222; color: white; outline: none; }
+        input[type="text"] { flex: 1; padding: 12px 15px; border-radius: 20px; border: none; background: #222; color: white; outline: none; }
         
-        .id-bar { 
-            position: absolute; top: 40px; left: 15px; z-index: 20; font-size: 11px; 
-            background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--neon); 
-        }
+        .id-bar { position: absolute; top: 15px; left: 15px; z-index: 20; font-size: 11px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--neon); }
     </style>
 </head>
 <body>
 
-    <div id="status-bar">Đang khởi tạo hệ thống...</div>
+    <div id="status-bar">Đang khởi tạo Camera...</div>
 
     <div class="id-bar">
         ID: <span id="my-id" style="color:var(--neon); font-weight:bold;">...</span> | 
-        <input id="peer-id-input" type="number" placeholder="Mã bạn" style="width: 65px; background: transparent; color: white; border: none; outline: none; font-weight: bold;">
+        <input id="peer-id-input" type="number" placeholder="Mã bạn" style="width: 65px; background: transparent; color: white; border: none; outline: none;">
     </div>
 
     <div class="video-wrapper">
@@ -70,7 +60,7 @@
         <div id="chat-box"></div>
         <div class="input-area">
             <label style="cursor: pointer;">🖼️<input type="file" id="file-input" hidden accept="image/*"></label>
-            <input type="text" id="chat-input" placeholder="Nhập tin nhắn...">
+            <input type="text" id="chat-input" placeholder="Nhắn tin...">
             <button onclick="sendMsg()" style="background:none; border:none; color:var(--neon); font-size: 22px;">🚀</button>
         </div>
     </div>
@@ -86,92 +76,95 @@
             else statusEl.style.background = 'var(--warning)';
         }
 
+        // KẾT HỢP CẢ 2 SERVER ĐỂ TỐI ƯU KẾT NỐI
         const peer = new Peer(customId, {
             config: {
                 'iceServers': [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }
-                ]
+                    // Dùng mã riêng của anh Tùng Anh để "mồi" kết nối cực mạnh
+                    { 
+                        urls: 'turn:global.relay.metered.ca:443', 
+                        username: '6e815724635c858e908b1419', 
+                        credential: '/I2NIZRvuJHzUMFI' 
+                    },
+                    // Dự phòng bằng OpenRelay
+                    { 
+                        urls: 'turn:openrelay.metered.ca:443', 
+                        username: 'openrelayproject', 
+                        credential: 'openrelayproject' 
+                    }
+                ],
+                'iceCandidatePoolSize': 10
             }
         });
 
         let localStream, currentCall, dataConn;
-        let isCamOn = true;
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
-            updateStatus('Đã trực tuyến - Sẵn sàng nhận cuộc gọi', 'success');
+            updateStatus('Sẵn sàng kết nối (Online)', 'success');
         });
 
-        peer.on('error', err => {
-            console.error(err);
-            updateStatus('Lỗi: ' + err.type + ' (Kiểm tra kết nối mạng)', 'error');
-            if(err.type === 'peer-allowed-error') alert("ID này không tồn tại hoặc đã thoát!");
-        });
-
+        // Tự động yêu cầu quyền Cam/Mic ngay lập tức
         navigator.mediaDevices.getUserMedia({ 
-            video: { width: 1280, height: 720 }, audio: true 
+            video: { width: 640, height: 480 }, audio: true 
         }).then(stream => {
             localStream = stream;
             document.getElementById('local-video').srcObject = stream;
-        }).catch(() => updateStatus('Lỗi: Chưa cấp quyền Camera/Micro', 'error'));
+            updateStatus('Camera đã bật - Sẵn sàng', 'success');
+        }).catch(() => updateStatus('Lỗi: Hãy cấp quyền Camera/Micro!', 'error'));
 
+        // Xử lý khi có cuộc gọi đến
         peer.on('call', call => {
-            updateStatus('Có cuộc gọi đến...', 'warning');
-            if(confirm("Chấp nhận cuộc gọi từ " + call.peer + "?")) {
-                currentCall = call;
-                call.answer(localStream);
-                setupRemoteStream(call);
-                updateStatus('Đang đàm thoại với: ' + call.peer, 'success');
-            }
-        });
-
-        peer.on('connection', conn => {
-            dataConn = conn;
-            setupDataListeners();
+            updateStatus('Đang có cuộc gọi đến...', 'warning');
+            currentCall = call;
+            call.answer(localStream);
+            setupRemoteStream(call);
         });
 
         function makeCall() {
             const id = document.getElementById('peer-id-input').value;
-            if(!id) return alert("Vui lòng nhập ID!");
-            
-            updateStatus('Đang gọi tới ' + id + '...', 'warning');
-            
+            if(!id) return alert("Nhập mã đối phương!");
+            updateStatus('Đang gọi: ' + id + '...', 'warning');
             dataConn = peer.connect(id);
-            setupDataListeners();
-
             currentCall = peer.call(id, localStream);
             setupRemoteStream(currentCall);
-
-            // Kiểm tra xem bên kia có nhấc máy không
-            currentCall.on('close', () => updateStatus('Cuộc gọi đã kết thúc', 'warning'));
         }
 
         function setupRemoteStream(call) {
             call.on('stream', rs => {
+                updateStatus('Đang đồng bộ hình ảnh...', 'warning');
                 const rv = document.getElementById('remote-video');
                 rv.srcObject = rs;
-                rv.play().then(() => {
-                    updateStatus('Đã kết nối hình ảnh & âm thanh', 'success');
-                    setTimeout(() => { rv.muted = false; }, 1000);
-                });
+                
+                // Fix lỗi đứng hình: Ép video play liên tục
+                const playPromise = rv.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {
+                        updateStatus('Đã kết nối thành công!', 'success');
+                        setTimeout(() => { rv.muted = false; }, 800);
+                    }).catch(e => {
+                        rv.muted = true;
+                        rv.play();
+                    });
+                }
             });
         }
 
-        function setupDataListeners() {
-            dataConn.on('open', () => updateStatus('Đã nối máy thành công!', 'success'));
-            dataConn.on('data', data => {
+        // Chat và các nút điều khiển giữ nguyên
+        peer.on('connection', conn => {
+            dataConn = conn;
+            conn.on('data', data => {
                 if(data.type === 'text') appendMsg('peer', data.content);
                 if(data.type === 'img') appendImg('peer', data.content);
             });
-        }
+        });
 
         function toggleCam() {
-            isCamOn = !isCamOn;
-            localStream.getVideoTracks()[0].enabled = isCamOn;
-            document.getElementById('cam-btn').innerText = isCamOn ? "📹" : "🚫";
-            document.getElementById('cam-btn').classList.toggle('btn-off', !isCamOn);
+            const track = localStream.getVideoTracks()[0];
+            track.enabled = !track.enabled;
+            document.getElementById('cam-btn').innerText = track.enabled ? "📹" : "🚫";
+            document.getElementById('cam-btn').classList.toggle('btn-off', !track.enabled);
         }
 
         function toggleMic() {
@@ -193,15 +186,16 @@
             const div = document.createElement('div');
             div.className = `msg ${sender}`;
             div.innerText = text;
-            document.getElementById('chat-box').appendChild(div);
-            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+            const box = document.getElementById('chat-box');
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
 
         document.getElementById('file-input').onchange = (e) => {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = () => {
-                dataConn.send({type: 'img', content: reader.result});
+                if(dataConn) dataConn.send({type: 'img', content: reader.result});
                 appendImg('me', reader.result);
             };
             reader.readAsDataURL(file);
