@@ -3,47 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mina OTT - Twilio Premium</title>
+    <title>Mina OTT - Twilio Hardcore Fix</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --neon: #00f2ff; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; color: white; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-        
-        #status-bar { background: var(--warning); color: #000; text-align: center; font-size: 12px; font-weight: bold; padding: 6px 0; z-index: 100; }
-
-        .video-wrapper { position: relative; flex: 1; width: 100vw; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #status-bar { background: var(--warning); color: #000; text-align: center; font-size: 13px; font-weight: bold; padding: 8px 0; z-index: 100; transition: 0.3s; }
+        .video-wrapper { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; background: #111; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
-        #local-video { position: absolute; top: 45px; right: 15px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10; background: #222; }
-
+        #local-video { position: absolute; top: 50px; right: 15px; width: 110px; height: 150px; border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10; background: #222; }
         #incoming-call-box { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.95); border: 2px solid var(--neon); padding: 30px;
             border-radius: 20px; text-align: center; z-index: 1000; display: none;
             box-shadow: 0 0 30px var(--neon); width: 85%;
         }
-
-        .controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 20; }
-        .btn-round { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 22px; }
+        .controls { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 20; }
+        .btn-round { width: 60px; height: 60px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .btn-call { background: var(--success); color: white; }
         .btn-end { background: var(--danger); color: white; }
         .btn-util { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; }
-
-        .chat-section { height: 32vh; background: #0a0a0a; display: flex; flex-direction: column; border-top: 1px solid #333; }
-        #chat-box { flex: 1; overflow-y: auto; padding: 12px; font-size: 14px; display: flex; flex-direction: column; }
-        .msg { margin-bottom: 8px; padding: 8px 14px; border-radius: 15px; max-width: 85%; }
-        .msg.me { background: #007aff; align-self: flex-end; }
-        .msg.peer { background: #26262b; align-self: flex-start; }
-
-        .input-area { padding: 10px; display: flex; gap: 8px; background: #111; }
-        input[type="text"] { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #222; color: white; outline: none; }
-        
-        .id-bar { position: absolute; top: 45px; left: 15px; z-index: 20; font-size: 11px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--neon); }
+        .id-bar { position: absolute; top: 50px; left: 15px; z-index: 20; font-size: 11px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--neon); }
     </style>
 </head>
 <body>
 
-    <div id="status-bar">Đang kết nối Twilio Network...</div>
+    <div id="status-bar">Đang khởi tạo hệ thống...</div>
 
     <div id="incoming-call-box">
         <h3 style="margin:0">Cuộc gọi đến...</h3>
@@ -71,14 +57,6 @@
         </div>
     </div>
 
-    <div class="chat-section">
-        <div id="chat-box"></div>
-        <div class="input-area">
-            <input type="text" id="chat-input" placeholder="Nhắn tin...">
-            <button onclick="sendMsg()" style="background:none; border:none; color:var(--neon); font-size: 22px;">🚀</button>
-        </div>
-    </div>
-
     <script>
         const statusEl = document.getElementById('status-bar');
         const callBox = document.getElementById('incoming-call-box');
@@ -89,7 +67,7 @@
             statusEl.style.background = type === 'success' ? 'var(--success)' : (type === 'error' ? 'var(--danger)' : 'var(--warning)');
         }
 
-        // TÍCH HỢP TWILIO SID & TOKEN CỦA ANH TÙNG ANH
+        // CẤU HÌNH ÉP DÙNG RELAY ĐỂ VƯỢT 4G
         const peer = new Peer(customId, {
             config: {
                 'iceServers': [
@@ -104,19 +82,21 @@
                         credential: '9daacbcd407e9ebf3fe90536be2a4d33'
                     }
                 ],
+                'iceTransportPolicy': 'relay', // ÉP BUỘC CHỈ DÙNG TURN SERVER (CỰC QUAN TRỌNG CHO 4G)
                 'iceCandidatePoolSize': 10
             }
         });
 
-        let localStream, currentCall, dataConn, incomingCall;
+        let localStream, incomingCall;
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
-            updateStatus('Hệ thống Twilio: Đã sẵn sàng', 'success');
+            updateStatus('Đã kết nối Twilio (Relay Mode)', 'success');
         });
 
+        // Hạ độ phân giải để đảm bảo hình lên được
         navigator.mediaDevices.getUserMedia({ 
-            video: { width: 640, height: 480 }, 
+            video: { width: 480, height: 360, frameRate: 15 }, 
             audio: true 
         }).then(stream => {
             localStream = stream;
@@ -127,70 +107,47 @@
             incomingCall = call;
             document.getElementById('caller-id').innerText = call.peer;
             callBox.style.display = 'block';
-            updateStatus('CÓ CUỘC GỌI ĐẾN...', 'warning');
+            updateStatus('ĐANG ĐỔ CHUÔNG...', 'warning');
         });
 
         function answerCall() {
             callBox.style.display = 'none';
             incomingCall.answer(localStream);
-            setupRemoteStream(incomingCall);
-        }
-
-        function rejectCall() {
-            callBox.style.display = 'none';
-            incomingCall.close();
-            updateStatus('Đã từ chối', 'error');
-        }
-
-        function makeCall() {
-            const id = document.getElementById('peer-id-input').value;
-            if(!id) return;
-            updateStatus('Đang gọi ' + id + '...', 'warning');
-            dataConn = peer.connect(id);
-            currentCall = peer.call(id, localStream);
-            setupRemoteStream(currentCall);
-        }
-
-        function setupRemoteStream(call) {
-            call.on('stream', rs => {
+            
+            incomingCall.on('stream', rs => {
                 const rv = document.getElementById('remote-video');
                 rv.srcObject = rs;
+                updateStatus('Đang đồng bộ luồng video...', 'warning');
+                
                 rv.onloadedmetadata = () => {
                     rv.play().then(() => {
-                        updateStatus('Đã kết nối thành công!', 'success');
+                        updateStatus('Đã đàm thoại thành công', 'success');
                         rv.muted = false;
-                    }).catch(() => {
-                        rv.muted = true;
-                        rv.play();
+                    }).catch(e => {
+                        updateStatus('Vui lòng chạm vào màn hình!', 'warning');
+                        rv.muted = true; rv.play();
                     });
                 };
             });
         }
 
-        peer.on('connection', conn => {
-            dataConn = conn;
-            conn.on('data', data => { if(data.type === 'text') appendMsg('peer', data.content); });
-        });
-
-        function sendMsg() {
-            const txt = document.getElementById('chat-input').value;
-            if(!txt || !dataConn) return;
-            dataConn.send({type: 'text', content: txt});
-            appendMsg('me', txt);
-            document.getElementById('chat-input').value = '';
-        }
-
-        function appendMsg(sender, text) {
-            const div = document.createElement('div');
-            div.className = `msg ${sender}`;
-            div.innerText = text;
-            document.getElementById('chat-box').appendChild(div);
-            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+        function makeCall() {
+            const id = document.getElementById('peer-id-input').value;
+            if(!id) return alert("Nhập ID!");
+            updateStatus('Đang gọi ' + id + '...', 'warning');
+            
+            const call = peer.call(id, localStream);
+            call.on('stream', rs => {
+                const rv = document.getElementById('remote-video');
+                rv.srcObject = rs;
+                updateStatus('Đã kết nối hình ảnh!', 'success');
+            });
         }
 
         function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; }
         function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; }
         function endCall() { location.reload(); }
+        function rejectCall() { location.reload(); }
     </script>
 </body>
 </html>
