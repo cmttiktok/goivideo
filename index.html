@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mina OTT - Call Controls</title>
+    <title>Mina OTT - Final Audio/Video Fix</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --neon: #00f2ff; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
@@ -16,14 +16,12 @@
         #remote-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
         #local-video { position: absolute; top: 45px; right: 15px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10; background: #222; }
 
-        /* Bảng thông báo cuộc gọi đến */
         #incoming-call-box { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9); border: 2px solid var(--neon); padding: 30px;
+            background: rgba(0,0,0,0.95); border: 2px solid var(--neon); padding: 30px;
             border-radius: 20px; text-align: center; z-index: 1000; display: none;
-            box-shadow: 0 0 30px var(--neon); width: 80%;
+            box-shadow: 0 0 30px var(--neon); width: 85%;
         }
-        .call-actions { display: flex; justify-content: space-around; margin-top: 20px; }
 
         .controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 20; }
         .btn-round { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 22px; }
@@ -49,8 +47,8 @@
 
     <div id="incoming-call-box">
         <h3 style="margin:0">Cuộc gọi đến...</h3>
-        <p id="caller-id" style="color: var(--neon)">ID: ---</p>
-        <div class="call-actions">
+        <p id="caller-id" style="color: var(--neon); font-size: 20px; font-weight: bold;">---</p>
+        <div style="display: flex; justify-content: space-around; margin-top: 20px;">
             <button class="btn-round btn-call" onclick="answerCall()">📞</button>
             <button class="btn-round btn-end" onclick="rejectCall()">🛑</button>
         </div>
@@ -76,7 +74,6 @@
     <div class="chat-section">
         <div id="chat-box"></div>
         <div class="input-area">
-            <label style="cursor: pointer;">🖼️<input type="file" id="file-input" hidden accept="image/*"></label>
             <input type="text" id="chat-input" placeholder="Nhắn tin...">
             <button onclick="sendMsg()" style="background:none; border:none; color:var(--neon); font-size: 22px;">🚀</button>
         </div>
@@ -98,7 +95,8 @@
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'turn:turn.pion.ly:3478', username: 'pion', credential: 'pion' },
                     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
-                ]
+                ],
+                'iceCandidatePoolSize': 10
             }
         });
 
@@ -106,39 +104,42 @@
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
-            updateStatus('Sẵn sàng kết nối', 'success');
+            updateStatus('Đã trực tuyến - Chờ kết nối', 'success');
         });
 
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+        // Hạ cấu hình Video xuống để dễ truyền qua 4G
+        navigator.mediaDevices.getUserMedia({ 
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 20 } }, 
+            audio: { echoCancellation: true, noiseSuppression: true } 
+        }).then(stream => {
             localStream = stream;
             document.getElementById('local-video').srcObject = stream;
-        });
+        }).catch(() => updateStatus('Lỗi: Chưa cấp quyền Camera/Micro', 'error'));
 
-        // KHI CÓ NGƯỜI GỌI ĐẾN
         peer.on('call', call => {
             incomingCall = call;
-            document.getElementById('caller-id').innerText = "ID: " + call.peer;
+            document.getElementById('caller-id').innerText = call.peer;
             callBox.style.display = 'block';
-            updateStatus('Đang đổ chuông...', 'warning');
+            updateStatus('ĐANG ĐỔ CHUÔNG...', 'warning');
         });
 
         function answerCall() {
             callBox.style.display = 'none';
             incomingCall.answer(localStream);
             setupRemoteStream(incomingCall);
-            updateStatus('Đang đàm thoại', 'success');
         }
 
         function rejectCall() {
             callBox.style.display = 'none';
             incomingCall.close();
-            updateStatus('Đã từ chối cuộc gọi', 'error');
+            location.reload();
         }
 
         function makeCall() {
             const id = document.getElementById('peer-id-input').value;
-            if(!id) return alert("Nhập ID!");
+            if(!id) return alert("Vui lòng nhập ID!");
             updateStatus('Đang gọi tới ' + id + '...', 'warning');
+            
             dataConn = peer.connect(id);
             currentCall = peer.call(id, localStream);
             setupRemoteStream(currentCall);
@@ -146,28 +147,30 @@
 
         function setupRemoteStream(call) {
             call.on('stream', rs => {
+                updateStatus('Đang tải hình ảnh & âm thanh...', 'warning');
                 const rv = document.getElementById('remote-video');
                 rv.srcObject = rs;
-                rv.play();
-                updateStatus('Đã kết nối hình ảnh', 'success');
+                
+                // Mẹo quan trọng: Ép phát video và âm thanh
+                rv.onloadedmetadata = () => {
+                    rv.play().then(() => {
+                        updateStatus('Đã kết nối thành công!', 'success');
+                        rv.muted = false; // Mở tiếng
+                        rv.volume = 1.0;
+                    }).catch(e => {
+                        console.log("Auto-play bị chặn, đang thử lại...");
+                        rv.muted = true; // Nếu bị chặn thì tắt tiếng để hình hiện lên trước
+                        rv.play();
+                        updateStatus('Chạm vào màn hình để nghe tiếng', 'warning');
+                    });
+                };
             });
         }
 
-        // Chat Logic
         peer.on('connection', conn => {
             dataConn = conn;
-            conn.on('data', data => {
-                if(data.type === 'text') appendMsg('peer', data.content);
-            });
+            conn.on('data', data => { if(data.type === 'text') appendMsg('peer', data.content); });
         });
-
-        function toggleCam() {
-            localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-        }
-
-        function toggleMic() {
-            localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-        }
 
         function sendMsg() {
             const txt = document.getElementById('chat-input').value;
@@ -185,6 +188,8 @@
             document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
         }
 
+        function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; }
+        function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; }
         function endCall() { location.reload(); }
     </script>
 </body>
