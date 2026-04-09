@@ -3,57 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mina OTT - Video & Audio Full Fix</title>
+    <title>Mina OTT - HD & Full Screen</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --neon: #00f2ff; --accent: #ff007b; }
-        body { margin: 0; background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; height: 100vh; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Giao diện Video */
-        .video-wrapper { position: relative; width: 100vw; height: 50vh; background: #111; border-bottom: 1px solid #222; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        /* Fix khung video chiếm trọn phần trên */
+        .video-wrapper { 
+            position: relative; 
+            flex: 1; /* Tự động lấy hết diện tích còn trống */
+            width: 100vw; 
+            background: #000; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #remote-video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; /* Tràn màn hình không để lại khoảng đen */
+        }
         #local-video { 
-            position: absolute; top: 10px; right: 10px; width: 100px; height: 140px; 
+            position: absolute; top: 15px; right: 15px; width: 110px; height: 150px; 
             border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10;
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
         }
 
-        /* Nút điều khiển */
         .controls { 
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 12px; z-index: 20;
+            display: flex; gap: 15px; z-index: 20;
         }
         .btn-round { 
-            width: 50px; height: 50px; border-radius: 50%; border: none; 
-            display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 22px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            width: 55px; height: 55px; border-radius: 50%; border: none; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px;
         }
         .btn-call { background: #22c55e; color: white; }
         .btn-end { background: #ef4444; color: white; }
-        .btn-util { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .btn-util { background: rgba(255,255,255,0.25); color: white; backdrop-filter: blur(10px); }
 
-        /* Giao diện Chat */
-        .chat-section { height: 50vh; background: #0a0a0a; display: flex; flex-direction: column; }
+        /* Chat chỉ chiếm 40% màn hình dưới */
+        .chat-section { 
+            height: 40vh; background: #0a0a0a; display: flex; flex-direction: column; 
+            border-top: 1px solid #333;
+        }
         #chat-box { flex: 1; overflow-y: auto; padding: 15px; font-size: 14px; display: flex; flex-direction: column; }
-        .msg { margin-bottom: 10px; padding: 10px 14px; border-radius: 18px; max-width: 80%; word-wrap: break-word; }
+        .msg { margin-bottom: 8px; padding: 10px 14px; border-radius: 18px; max-width: 85%; }
         .msg.me { background: #007aff; align-self: flex-end; }
         .msg.peer { background: #26262b; align-self: flex-start; }
-        .msg img { max-width: 100%; border-radius: 10px; margin-top: 5px; display: block; }
 
-        .input-area { padding: 10px; display: flex; gap: 8px; background: #111; align-items: center; border-top: 1px solid #222; }
-        input[type="text"] { flex: 1; padding: 12px 18px; border-radius: 25px; border: none; background: #222; color: white; outline: none; font-size: 16px; }
+        .input-area { padding: 12px; display: flex; gap: 8px; background: #111; align-items: center; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: none; background: #222; color: white; outline: none; }
         
         .id-bar { 
-            position: absolute; top: 10px; left: 10px; z-index: 20; font-size: 11px; 
-            background: rgba(0,0,0,0.8); padding: 6px 15px; border-radius: 20px; border: 1px solid var(--neon); 
+            position: absolute; top: 15px; left: 15px; z-index: 20; font-size: 12px; 
+            background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 20px; border: 1px solid var(--neon); 
         }
     </style>
 </head>
 <body>
 
     <div class="id-bar">
-        MY ID: <span id="my-id" style="color:var(--neon); font-weight:bold;">...</span> | 
-        <input id="peer-id-input" type="number" placeholder="ID đối phương" style="width: 80px; background: transparent; color: var(--accent); border: none; outline: none; font-weight: bold;">
+        ID: <span id="my-id" style="color:var(--neon); font-weight:bold;">...</span> | 
+        <input id="peer-id-input" type="number" placeholder="Nhập ID" style="width: 70px; background: transparent; color: #fff; border: none; outline: none;">
     </div>
 
     <div class="video-wrapper">
@@ -71,16 +84,14 @@
     <div class="chat-section">
         <div id="chat-box"></div>
         <div class="input-area">
-            <label style="cursor: pointer; padding: 5px; font-size: 20px;">🖼️<input type="file" id="file-input" hidden accept="image/*"></label>
-            <input type="text" id="chat-input" placeholder="Nhắn tin cho bạn bè...">
+            <label style="cursor: pointer;">🖼️<input type="file" id="file-input" hidden accept="image/*"></label>
+            <input type="text" id="chat-input" placeholder="Nhắn tin...">
             <button onclick="sendMsg()" style="background:none; border:none; color:var(--neon); font-size: 26px;">🚀</button>
         </div>
     </div>
 
     <script>
         const customId = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // CẤU HÌNH TURN SERVER RIÊNG CỦA ANH TÙNG ANH
         const peer = new Peer(customId, {
             config: {
                 'iceServers': [
@@ -89,14 +100,8 @@
                         urls: 'turn:global.relay.metered.ca:443', 
                         username: '6e815724635c858e908b1419', 
                         credential: '/I2NIZRvuJHzUMFI' 
-                    },
-                    { 
-                        urls: 'turn:global.relay.metered.ca:80', 
-                        username: '6e815724635c858e908b1419', 
-                        credential: '/I2NIZRvuJHzUMFI' 
                     }
                 ],
-                'iceCandidatePoolSize': 10,
                 'sdpSemantics': 'unified-plan'
             }
         });
@@ -105,69 +110,51 @@
 
         peer.on('open', id => document.getElementById('my-id').innerText = id);
 
-        // Chuẩn bị Camera và Micro (Rất quan trọng)
+        // NÂNG CẤP CHẤT LƯỢNG HÌNH ẢNH (HD)
         navigator.mediaDevices.getUserMedia({ 
-            video: { width: { ideal: 640 }, height: { ideal: 480 } }, 
+            video: { 
+                width: { ideal: 1280 }, 
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 } 
+            }, 
             audio: { echoCancellation: true, noiseSuppression: true } 
         }).then(stream => {
             localStream = stream;
             document.getElementById('local-video').srcObject = stream;
-        }).catch(err => alert("Lỗi: Bạn chưa cấp quyền Camera/Micro!"));
-
-        // Khi có cuộc gọi đến
-        peer.on('call', call => {
-            if(confirm("Có cuộc gọi mới! Bạn muốn trả lời chứ?")) {
-                currentCall = call;
-                call.answer(localStream);
-                setupRemoteStream(call);
-            }
         });
 
-        // Khi có kết nối dữ liệu (Chat)
+        peer.on('call', call => {
+            currentCall = call;
+            call.answer(localStream);
+            setupRemoteStream(call);
+        });
+
         peer.on('connection', conn => {
             dataConn = conn;
-            setupDataListeners();
+            conn.on('data', data => {
+                if(data.type === 'text') appendMsg('peer', data.content);
+                if(data.type === 'img') appendImg('peer', data.content);
+            });
         });
 
         function makeCall() {
             const id = document.getElementById('peer-id-input').value;
-            if(!id) return alert("Vui lòng nhập ID người nhận!");
-
+            if(!id) return;
             dataConn = peer.connect(id);
-            setupDataListeners();
-
             currentCall = peer.call(id, localStream);
             setupRemoteStream(currentCall);
         }
 
-        // HÀM XỬ LÝ VIDEO VÀ AUDIO (FIX LỖI MẤT TIẾNG)
         function setupRemoteStream(call) {
             call.on('stream', rs => {
                 const rv = document.getElementById('remote-video');
                 rv.srcObject = rs;
-
-                // Các thuộc tính bắt buộc cho Mobile
-                rv.setAttribute('autoplay', '');
-                rv.setAttribute('playsinline', '');
-                rv.setAttribute('webkit-playsinline', '');
-                
-                // Mẹo lách luật Autoplay của trình duyệt: Mute -> Play -> Unmute
-                rv.muted = true; 
                 rv.play().then(() => {
-                    setTimeout(() => {
-                        rv.muted = false; // Mở tiếng sau 1 giây khi hình đã lên
-                    }, 1000);
-                }).catch(e => {
-                    console.log("Trình duyệt yêu cầu tương tác để bật tiếng");
-                    // Hiện thông báo nếu cần thiết
+                    setTimeout(() => { rv.muted = false; }, 1000);
+                }).catch(() => {
+                    rv.muted = true;
+                    rv.play();
                 });
-            });
-        }
-
-        function setupDataListeners() {
-            dataConn.on('data', data => {
-                if(data.type === 'text') appendMsg('peer', data.content);
-                if(data.type === 'img') appendImg('peer', data.content);
             });
         }
 
@@ -201,10 +188,9 @@
         function appendImg(sender, src) {
             const div = document.createElement('div');
             div.className = `msg ${sender}`;
-            div.innerHTML = `<img src="${src}">`;
-            const box = document.getElementById('chat-box');
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
+            div.innerHTML = `<img src="${src}" style="max-width:100%; border-radius:10px;">`;
+            document.getElementById('chat-box').appendChild(div);
+            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
         }
 
         function toggleMic() {
@@ -213,9 +199,7 @@
             document.getElementById('mic-btn').innerText = track.enabled ? "🎙️" : "🔇";
         }
 
-        function endCall() { 
-            location.reload(); 
-        }
+        function endCall() { location.reload(); }
 
         function takeSnapshot() {
             const video = document.getElementById('remote-video');
@@ -223,9 +207,7 @@
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             const link = document.createElement('a');
-            link.download = `mina-photo.png`;
-            link.href = canvas.toDataURL();
-            link.click();
+            link.download = `photo.png`; link.href = canvas.toDataURL(); link.click();
         }
     </script>
 </body>
