@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Call Pro</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: radial-gradient(circle, #1e3a8a, #000000);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            width: 90%;
+            max-width: 900px;
+        }
+        h2 { color: #00f2ff; text-shadow: 0 0 10px #00f2ff; }
+        .video-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        video {
+            width: 45%;
+            min-width: 300px;
+            background: #111;
+            border-radius: 15px;
+            border: 2px solid #00f2ff;
+            box-shadow: 0 0 15px #00f2ff;
+            margin-bottom: 10px;
+        }
+        input {
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            width: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+            border-bottom: 2px solid #00f2ff;
+        }
+        button {
+            padding: 12px 25px;
+            border-radius: 8px;
+            border: none;
+            background: #00f2ff;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            box-shadow: 0 0 20px #00f2ff;
+            transform: translateY(-2px);
+        }
+        #my-id { font-size: 1.2em; color: #ff007b; text-shadow: 0 0 5px #ff007b; }
+    </style>
+</head>
+<body>
+
+    <div class="glass-card">
+        <h2>MINA VIDEO CALL</h2>
+        <p>ID của bạn: <span id="my-id">Đang khởi tạo...</span></p>
+        
+        <div class="controls">
+            <input type="text" id="remote-id" placeholder="Dán ID người nhận...">
+            <button onclick="makeCall()">Bắt đầu gọi</button>
+        </div>
+
+        <div class="video-container">
+            <video id="local-video" autoplay muted></video>
+            <video id="remote-video" autoplay></video>
+        </div>
+        <p style="font-size: 0.8em; opacity: 0.6;">Dành cho Tùng Anh - Computer Service</p>
+    </div>
+
+    <script>
+        const peer = new Peer(); 
+        let localStream;
+
+        // 1. Lấy ID cá nhân
+        peer.on('open', id => {
+            document.getElementById('my-id').innerText = id;
+        });
+
+        // 2. Mở Camera và Mic
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                localStream = stream;
+                document.getElementById('local-video').srcObject = stream;
+            })
+            .catch(err => {
+                alert("Vui lòng cho phép truy cập camera/mic!");
+                console.error(err);
+            });
+
+        // 3. Xử lý khi có người khác gọi đến
+        peer.on('call', call => {
+            if(confirm("Có cuộc gọi đến, bạn có muốn nghe không?")) {
+                call.answer(localStream);
+                call.on('stream', remoteStream => {
+                    document.getElementById('remote-video').srcObject = remoteStream;
+                });
+            }
+        });
+
+        // 4. Hàm thực hiện cuộc gọi
+        function makeCall() {
+            const destId = document.getElementById('remote-id').value;
+            if(!destId) return alert("Hãy nhập ID đối phương!");
+            
+            const call = peer.call(destId, localStream);
+            call.on('stream', remoteStream => {
+                document.getElementById('remote-video').srcObject = remoteStream;
+            });
+        }
+    </script>
+</body>
+</html>
