@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mina OTT - Google & OpenRelay</title>
+    <title>Mina OTT - Rescue Server</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --neon: #00f2ff; --success: #22c55e; --warning: #f59e0b; --danger: #ef4444; }
@@ -13,15 +13,14 @@
         #status-bar { background: var(--warning); color: #000; text-align: center; font-size: 12px; font-weight: bold; padding: 6px 0; z-index: 100; }
 
         .video-wrapper { position: relative; flex: 1; width: 100vw; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { position: absolute; top: 15px; right: 15px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10; background: #222; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        #local-video { position: absolute; top: 40px; right: 15px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid var(--neon); object-fit: cover; z-index: 10; background: #222; }
 
         .controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 20; }
         .btn-round { width: 50px; height: 50px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .btn-call { background: var(--success); color: white; }
         .btn-end { background: var(--danger); color: white; }
         .btn-util { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); }
-        .btn-off { background: #555 !important; color: #ff4d4d !important; }
 
         .chat-section { height: 35vh; background: #0a0a0a; display: flex; flex-direction: column; border-top: 1px solid #333; }
         #chat-box { flex: 1; overflow-y: auto; padding: 12px; font-size: 14px; display: flex; flex-direction: column; }
@@ -32,16 +31,16 @@
         .input-area { padding: 10px; display: flex; gap: 8px; background: #111; align-items: center; }
         input[type="text"] { flex: 1; padding: 12px 15px; border-radius: 20px; border: none; background: #222; color: white; outline: none; }
         
-        .id-bar { position: absolute; top: 15px; left: 15px; z-index: 20; font-size: 11px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--neon); }
+        .id-bar { position: absolute; top: 40px; left: 15px; z-index: 20; font-size: 11px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--neon); }
     </style>
 </head>
 <body>
 
-    <div id="status-bar">Đang kết nối mạng...</div>
+    <div id="status-bar">Đang khởi tạo Camera...</div>
 
     <div class="id-bar">
         ID: <span id="my-id" style="color:var(--neon); font-weight:bold;">...</span> | 
-        <input id="peer-id-input" type="number" placeholder="ID" style="width: 55px; background: transparent; color: white; border: none; outline: none;">
+        <input id="peer-id-input" type="number" placeholder="Mã bạn" style="width: 60px; background: transparent; color: white; border: none; outline: none;">
     </div>
 
     <div class="video-wrapper">
@@ -79,18 +78,23 @@
         const peer = new Peer(customId, {
             config: {
                 'iceServers': [
-                    // CỤM STUN CỦA GOOGLE (MIỄN PHÍ VÔ TẬN)
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-                    
-                    // TURN DỰ PHÒNG CHO 4G (DÙNG OPENRELAY)
-                    { 
-                        urls: 'turn:openrelay.metered.ca:443', 
-                        username: 'openrelayproject', 
-                        credential: 'openrelayproject' 
+                    // CỤM SERVER CỨU HỘ: PION & OPENRELAY
+                    {
+                        urls: 'turn:turn.pion.ly:3478',
+                        username: 'pion',
+                        credential: 'pion'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
                     }
                 ],
                 'iceCandidatePoolSize': 10
@@ -101,7 +105,7 @@
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
-            updateStatus('Đã sẵn sàng (Server Google + OpenRelay)', 'success');
+            updateStatus('Sẵn sàng (Rescue Mode)', 'success');
         });
 
         navigator.mediaDevices.getUserMedia({ 
@@ -109,25 +113,18 @@
         }).then(stream => {
             localStream = stream;
             document.getElementById('local-video').srcObject = stream;
-        });
+        }).catch(() => updateStatus('Lỗi: Hãy cấp quyền Camera/Mic!', 'error'));
 
         peer.on('call', call => {
+            updateStatus('Có cuộc gọi...', 'warning');
             currentCall = call;
             call.answer(localStream);
             setupRemoteStream(call);
         });
 
-        peer.on('connection', conn => {
-            dataConn = conn;
-            conn.on('data', data => {
-                if(data.type === 'text') appendMsg('peer', data.content);
-                if(data.type === 'img') appendImg('peer', data.content);
-            });
-        });
-
         function makeCall() {
             const id = document.getElementById('peer-id-input').value;
-            if(!id) return;
+            if(!id) return alert("Chưa nhập ID!");
             updateStatus('Đang gọi ' + id + '...', 'warning');
             dataConn = peer.connect(id);
             currentCall = peer.call(id, localStream);
@@ -139,11 +136,19 @@
                 const rv = document.getElementById('remote-video');
                 rv.srcObject = rs;
                 rv.play().then(() => {
-                    updateStatus('Cuộc gọi đang diễn ra', 'success');
-                    setTimeout(() => { rv.muted = false; }, 800);
+                    updateStatus('Đang đàm thoại', 'success');
+                    setTimeout(() => { rv.muted = false; }, 1000);
                 });
             });
         }
+
+        peer.on('connection', conn => {
+            dataConn = conn;
+            conn.on('data', data => {
+                if(data.type === 'text') appendMsg('peer', data.content);
+                if(data.type === 'img') appendImg('peer', data.content);
+            });
+        });
 
         function toggleCam() {
             const track = localStream.getVideoTracks()[0];
