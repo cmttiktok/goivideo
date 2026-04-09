@@ -1,0 +1,12 @@
+{
+  "name": "video-call-tuna",
+  "version": "1.0.0",
+  "description": "Ứng dụng gọi video đơn giản",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
