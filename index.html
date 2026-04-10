@@ -6,219 +6,201 @@
     <title>Mina & Tùng Anh - Kết Nối Riêng Tư</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --pink: #ff85a2; --neon: #ff007f; --cyan: #00f2ff; --danger: #ef4444; }
+        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --glass: rgba(255, 255, 255, 0.2); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; overflow: hidden; }
         
-        #status-bar { background: var(--pink); color: #000; text-align: center; font-size: 13px; font-weight: bold; padding: 8px 0; z-index: 100; }
-        
-        .video-container { position: relative; flex: 1; background: #111; display: flex; align-items: center; justify-content: center; }
+        /* Video hiển thị */
+        .video-wrapper { position: relative; width: 100%; height: 100vh; background: #1a1a1a; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { position: absolute; top: 70px; right: 15px; width: 100px; height: 140px; border-radius: 15px; border: 2px solid var(--pink); object-fit: cover; z-index: 10; box-shadow: 0 0 15px var(--pink); }
+        #local-video { position: absolute; top: 20px; right: 20px; width: 110px; height: 160px; border-radius: 12px; border: 1.5px solid #fff; object-fit: cover; z-index: 10; }
 
-        #heart-btn { position: absolute; bottom: 130px; right: 20px; font-size: 50px; cursor: pointer; z-index: 35; filter: drop-shadow(0 0 15px var(--neon)); }
-        .heart-icon { position: absolute; color: var(--neon); pointer-events: none; animation: heartFly 1.2s ease-out forwards; z-index: 50; font-size: 35px; }
-        @keyframes heartFly { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-450px) scale(3); opacity: 0; } }
+        /* Thanh trạng thái & Thông tin */
+        #status-bar { position: absolute; top: 0; width: 100%; padding: 10px; text-align: center; background: rgba(0,0,0,0.5); font-size: 14px; z-index: 20; }
 
-        #incoming-box { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(20, 20, 20, 0.98); border: 2px solid var(--pink); padding: 35px;
-            border-radius: 35px; text-align: center; z-index: 1000; display: none; width: 85%;
-            backdrop-filter: blur(25px); box-shadow: 0 0 60px var(--pink);
-        }
+        /* Khung Chat đè lên Video */
+        #chat-container { position: absolute; bottom: 100px; left: 10px; right: 10px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; pointer-events: none; z-index: 30; }
+        .msg { background: var(--glass); backdrop-filter: blur(5px); padding: 8px 12px; border-radius: 15px; max-width: 80%; font-size: 14px; align-self: flex-start; pointer-events: auto; animation: fadeIn 0.3s; }
+        .msg.me { align-self: flex-end; background: var(--zalo-blue); }
 
-        .info-panel { position: absolute; top: 70px; left: 15px; z-index: 20; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 15px; border: 1px solid var(--pink); backdrop-filter: blur(8px); }
-        
-        .controls { position: absolute; bottom: 40px; left: 50%; transform: translateX( -50%); display: flex; gap: 20px; z-index: 40; }
-        .btn { width: 65px; height: 65px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; }
-        .btn-call { background: #22c55e; color: white; box-shadow: 0 0 20px #22c55e; }
-        .btn-end { background: var(--danger); color: white; }
-        .btn-tool { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
-        
-        #overlay-msg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; font-size: 1.2rem; text-align: center; padding: 20px; }
-        .start-btn { background: var(--pink); border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        /* Ô nhập tin nhắn */
+        .input-area { position: absolute; bottom: 85px; left: 10px; right: 10px; display: flex; gap: 8px; z-index: 40; }
+        #chat-input { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid var(--glass); border-radius: 20px; padding: 10px 15px; color: white; outline: none; backdrop-filter: blur(10px); }
+
+        /* Bộ điều khiển cuộc gọi */
+        .controls { position: absolute; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; gap: 25px; z-index: 50; }
+        .icon-btn { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; background: rgba(255,255,255,0.2); color: white; }
+        .btn-end { background: #ff3b30; }
+        .btn-call { background: #4cd964; width: 70px; height: 70px; font-size: 30px; }
+
+        /* Lớp phủ thông báo */
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; text-align: center; }
+        .start-btn { background: var(--zalo-blue); color: white; border: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; margin-top: 20px; }
+
+        #incoming-ui { position: fixed; inset: 0; background: linear-gradient(to bottom, #1e3c72, #2a5298); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 900; }
     </style>
 </head>
 <body>
 
-    <div id="status-bar">Đang khởi tạo kết nối...</div>
+    <div id="status-bar">Chưa kết nối</div>
 
-    <div id="overlay-msg">
-        <div id="msg-text">Chào mừng không gian riêng của <br> Anh Tùng Anh & Bé Chi 💖</div>
-        <button class="start-btn" onclick="initApp()">BẮT ĐẦU KẾT NỐI</button>
+    <div id="overlay">
+        <h2 id="welcome-text">Không gian của Anh & Bé Chi</h2>
+        <button class="start-btn" onclick="initApp()">BẮT ĐẦU</button>
     </div>
 
-    <div id="incoming-box">
-        <div style="font-size: 60px; margin-bottom: 15px;">💖</div>
-        <h3 id="incoming-text" style="margin:0">ĐANG CÓ CUỘC GỌI...</h3>
-        <div style="display: flex; justify-content: space-around; margin-top: 30px;">
-            <button class="btn btn-call" onclick="answerCall()">✅ NGHE</button>
-            <button class="btn btn-end" onclick="rejectCall()">❌ HUỶ</button>
+    <div id="incoming-ui">
+        <div style="width: 100px; height: 100px; background: var(--pink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 20px;">🌸</div>
+        <h2 id="caller-name-ui">ĐANG GỌI...</h2>
+        <div class="controls" style="position: relative; bottom: 0; margin-top: 50px;">
+            <button class="icon-btn btn-call" onclick="answerCall()">📞</button>
+            <button class="icon-btn btn-end" onclick="rejectCall()">✖</button>
         </div>
     </div>
 
-    <div class="info-panel">
-        <div style="font-size: 10px; opacity: 0.7;">ĐANG TRỰC:</div>
-        <div id="role-text" style="font-weight: bold; color: var(--pink); margin-bottom: 10px;">...</div>
-        <button id="main-call-btn" onclick="startCallProcess()" style="background: var(--pink); border:none; color:black; padding:12px; border-radius:12px; width:100%; font-weight:bold; cursor:pointer; display:none;">📞 GỌI NGAY</button>
-        <div id="offline-notice" style="color: gray; font-size: 12px;">Đang tìm người ấy...</div>
-    </div>
-
-    <div id="heart-btn" onclick="sendHeart()">❤️</div>
-
-    <div class="video-container">
+    <div class="video-wrapper">
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay muted playsinline></video>
         
+        <div id="chat-container"></div>
+
+        <div class="input-area">
+            <input type="text" id="chat-input" placeholder="Nhắn tin cho người ấy..." onkeypress="handleChat(event)">
+            <button onclick="sendChat()" style="background:none; border:none; font-size: 24px;">🚀</button>
+        </div>
+
         <div class="controls">
-            <button class="btn btn-tool" onclick="toggleMic()">🎙️</button>
-            <button class="btn btn-tool" onclick="toggleCam()">📹</button>
-            <button class="btn btn-end" onclick="endCall()">🛑</button>
+            <button class="icon-btn" onclick="toggleMic()">🎙️</button>
+            <button class="icon-btn" onclick="toggleCam()">📹</button>
+            <button class="icon-btn btn-end" onclick="endCall()">🛑</button>
         </div>
     </div>
 
-    <audio id="ringtone" loop preload="auto">
-        <source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="waiting-tone" loop preload="auto">
-        <source src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="ringtone" loop preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"></audio>
 
     <script>
         const ANH = "tunganh_0559898055";
         const CHI = "bechi_nangu";
-        
-        const hash = window.location.hash;
-        const isAdmin = hash === '#ad';
-        
+        const isAdmin = window.location.hash === '#ad';
         const MY_ID = isAdmin ? ANH : CHI;
         const PARTNER_ID = isAdmin ? CHI : ANH;
         
-        let localStream, dataConn, currentCall, peer;
+        let peer, localStream, dataConn, currentCall;
         const ringtone = document.getElementById('ringtone');
-        const waitingTone = document.getElementById('waiting-tone');
 
         function initApp() {
-            document.getElementById('overlay-msg').style.display = 'none';
-            // Kích hoạt audio cho trình duyệt
+            document.getElementById('overlay').style.display = 'none';
             ringtone.play().then(() => ringtone.pause());
-            waitingTone.play().then(() => waitingTone.pause());
             
-            startPeer();
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+                localStream = stream;
+                document.getElementById('local-video').srcObject = stream;
+                startPeer();
+            });
         }
 
         function startPeer() {
             peer = new Peer(MY_ID, {
                 debug: 1,
                 config: {
-                    'iceServers': [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'turn:213.163.197.199:443', username: 'tunganh', credential: 'mina2026' }
-                    ],
-                    'iceTransportPolicy': 'relay'
+                    'iceServers': [{ urls: 'stun:stun.l.google.com:19302' },
+                                   { urls: 'turn:213.163.197.199:443', username: 'tunganh', credential: 'mina2026' }]
                 }
             });
 
             peer.on('open', () => {
-                document.getElementById('status-bar').innerText = "Hệ thống đã sẵn sàng ✨";
-                document.getElementById('role-text').innerText = isAdmin ? "Anh Tùng Anh" : "Bé Chi 🌸";
-                document.getElementById('incoming-text').innerText = isAdmin ? "BÉ CHI ĐANG GỌI..." : "ANH TÙNG ANH ĐANG GỌI...";
-                
-                setInterval(checkPartnerOnline, 3000);
+                document.getElementById('status-bar').innerText = "Đang trực tuyến ✨";
+                setInterval(checkOnline, 3000);
             });
 
             peer.on('call', call => {
                 currentCall = call;
-                document.getElementById('incoming-box').style.display = 'block';
-                ringtone.currentTime = 0;
-                ringtone.play().catch(e => console.log("Lỗi âm thanh:", e));
+                document.getElementById('incoming-ui').style.display = 'flex';
+                document.getElementById('caller-name-ui').innerText = isAdmin ? "Bé Chi đang gọi..." : "Anh Tùng Anh đang gọi...";
+                ringtone.play();
             });
 
             peer.on('connection', conn => {
                 dataConn = conn;
-                setupData();
+                setupDataHandlers();
             });
         }
 
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-            localStream = stream;
-            document.getElementById('local-video').srcObject = stream;
-        });
-
-        function checkPartnerOnline() {
-            // Dùng cơ chế ping để kiểm tra online chính xác
+        function checkOnline() {
             const conn = peer.connect(PARTNER_ID);
             conn.on('open', () => {
-                document.getElementById('main-call-btn').style.display = 'block';
-                document.getElementById('offline-notice').style.display = 'none';
+                document.getElementById('status-bar').innerText = "Người ấy đang Online ❤️";
                 conn.close();
             });
         }
 
         function startCallProcess() {
-            waitingTone.currentTime = 0;
-            waitingTone.play();
-            document.getElementById('status-bar').innerText = "Đang kết nối tút tút...";
-            
+            document.getElementById('status-bar').innerText = "Đang kết nối...";
             const call = peer.call(PARTNER_ID, localStream);
             currentCall = call;
             dataConn = peer.connect(PARTNER_ID);
-            setupData();
-            
+            setupDataHandlers();
             call.on('stream', stream => {
-                waitingTone.pause();
                 document.getElementById('remote-video').srcObject = stream;
-                document.getElementById('status-bar').innerText = "Đang đàm thoại ❤️";
             });
         }
 
         function answerCall() {
             ringtone.pause();
-            document.getElementById('incoming-box').style.display = 'none';
+            document.getElementById('incoming-ui').style.display = 'none';
             currentCall.answer(localStream);
             dataConn = peer.connect(currentCall.peer);
-            setupData();
+            setupDataHandlers();
             currentCall.on('stream', stream => {
                 document.getElementById('remote-video').srcObject = stream;
-                document.getElementById('status-bar').innerText = "Đang đàm thoại ❤️";
             });
         }
 
-        function setupData() {
+        function setupDataHandlers() {
             dataConn.on('data', data => {
-                if(data === 'HEART') showHeartEffect();
-                if(data.type === 'END') {
-                    const msg = data.byAdmin ? "Anh Tùng Anh đã kết thúc" : "Bé Chi đã kết thúc";
-                    showEndNotice(msg);
-                }
+                if (data.type === 'CHAT') appendMsg(data.text, false);
+                if (data.type === 'END') showEndScreen(data.sender);
             });
         }
 
-        function showEndNotice(msg) {
-            document.getElementById('overlay-msg').style.display = 'flex';
-            document.getElementById('msg-text').innerHTML = `<span style="color:var(--pink)">${msg}</span>`;
-            document.querySelector('.start-btn').innerText = "QUAY LẠI";
-            document.querySelector('.start-btn').onclick = () => location.reload();
+        function handleChat(e) { if(e.key === 'Enter') sendChat(); }
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            if (input.value.trim() && dataConn && dataConn.open) {
+                dataConn.send({ type: 'CHAT', text: input.value });
+                appendMsg(input.value, true);
+                input.value = '';
+            }
         }
 
-        function sendHeart() { if(dataConn && dataConn.open) { dataConn.send('HEART'); showHeartEffect(); } }
-        
+        function appendMsg(text, isMe) {
+            const container = document.getElementById('chat-container');
+            const div = document.createElement('div');
+            div.className = `msg ${isMe ? 'me' : ''}`;
+            div.innerText = text;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            if(!isMe) { // Tự xóa tin nhắn sau 10s để đỡ vướng màn hình
+                setTimeout(() => div.remove(), 10000);
+            }
+        }
+
         function endCall() {
-            if(dataConn) dataConn.send({type: 'END', byAdmin: isAdmin});
-            showEndNotice("Bạn đã kết thúc cuộc gọi");
+            const name = isAdmin ? "Anh Tùng Anh" : "Bé Chi";
+            if(dataConn) dataConn.send({ type: 'END', sender: name });
+            showEndScreen("Bạn");
         }
 
-        function showHeartEffect() {
-            const heart = document.createElement('div');
-            heart.className = 'heart-icon'; heart.innerHTML = '❤️';
-            heart.style.left = (Math.random() * 50 + 25) + '%';
-            document.body.appendChild(heart);
-            setTimeout(() => heart.remove(), 1200);
+        function showEndScreen(who) {
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('welcome-text').innerHTML = `<span style="color:red">${who} đã kết thúc cuộc gọi</span>`;
+            document.querySelector('.start-btn').innerText = "GỌI LẠI";
+            document.querySelector('.start-btn').onclick = () => location.reload();
         }
 
         function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; }
         function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; }
-        function rejectCall() { ringtone.pause(); document.getElementById('incoming-box').style.display = 'none'; }
+        function rejectCall() { ringtone.pause(); document.getElementById('incoming-ui').style.display = 'none'; }
     </script>
 </body>
 </html>
