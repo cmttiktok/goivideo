@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Zalo - Kết nối yêu thương</title>
+    <title> Ứng dụng làm mới đường truyền Viettel Net</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --zalo-blue: #0068ff; --pink: #ff85a2; --bg: #f0f2f5; }
@@ -51,10 +51,10 @@
 
     <div id="login-overlay">
         <div class="login-card">
-            <h3 style="margin-top:0">Xác nhận danh tính</h3>
-            <p style="font-size:14px; color:#666">Nhập <b>1</b> nếu là Bé Chi <br> Nhập <b>2</b> nếu là Anh Tùng Anh</p>
-            <input type="number" id="user-id-input" placeholder="Nhập số 1 hoặc 2">
-            <button onclick="confirmIdentity()" style="width:100%; padding:12px; background:var(--zalo-blue); color:white; border:none; border-radius:10px; font-weight:bold">VÀO TRÒ CHUYỆN</button>
+            <h3 style="margin-top:0">Vui lòng nhập mã KH để kiểm tra</h3>
+            <p style="font-size:14px; color:#666">Mã KH bắt đầu bằng tên tỉnh viết tắt ví dụ như HN,HCM... </p>
+            <input type="number" id="user-id-input" placeholder="Nhập Mã KH">
+            <button onclick="confirmIdentity()" style="width:100%; padding:12px; background:var(--zalo-blue); color:white; border:none; border-radius:10px; font-weight:bold">KIỂM TRA</button>
         </div>
     </div>
 
@@ -106,12 +106,12 @@
             const input = document.getElementById('user-id-input').value;
             if(input === "1") {
                 myId = ID_CHI; partnerId = ID_ANH;
-                document.getElementById('partner-name-header').innerText = "Anh Tùng Anh ❤️";
+                document.getElementById('partner-name-header').innerText = "Bảo Bối ❤️";
             } else if(input === "2") {
                 myId = ID_ANH; partnerId = ID_CHI;
                 document.getElementById('partner-name-header').innerText = "Bé Chi 🌸";
             } else {
-                alert("Vui lòng nhập đúng số 1 hoặc 2");
+                alert("Mã KH Sai hoặc hệ thống đang quá tải vui lòng thử lại sau! ");
                 return;
             }
             
@@ -135,7 +135,7 @@
                 peer.on('call', call => {
                     currentCall = call;
                     document.getElementById('call-overlay').style.display = 'flex';
-                    document.getElementById('caller-name').innerText = (myId === ID_CHI) ? "Anh Tùng Anh đang gọi..." : "Bé Chi đang gọi...";
+                    document.getElementById('caller-name').innerText = (myId === ID_CHI) ? "Bảo Bối đang gọi..." : "Bé Chi đang gọi...";
                     ringtone.play();
                 });
 
@@ -205,7 +205,7 @@
         }
 
         function hangUp() {
-            const myName = (myId === ID_ANH) ? "Anh Tùng Anh" : "Bé Chi";
+            const myName = (myId === ID_ANH) ? "Bảo Bối" : "Bé Chi";
             if(dataConn) dataConn.send({ type: 'END', by: myName });
             showEndNotice("Bạn");
         }
