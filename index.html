@@ -6,7 +6,7 @@
     <title>Ứng dụng làm mới đường truyền Viettel Net</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --bg: #f0f2f5; }
+        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --bg: #f0f2f5; --danger: #ff3b30; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; }
         
@@ -18,7 +18,15 @@
         /* Giao diện chính */
         .main-container { position: relative; width: 100%; height: 100vh; display: none; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; background: #222; }
-        #local-video { position: absolute; top: 20px; right: 20px; width: 100px; height: 150px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.8); object-fit: cover; z-index: 10; background: #000; }
+        
+        /* SỬA LỖI CAMERA NGƯỢC: Lật gương video local */
+        #local-video { 
+            position: absolute; top: 20px; right: 20px; 
+            width: 100px; height: 150px; 
+            border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.8); 
+            object-fit: cover; z-index: 10; background: #000;
+            transform: scaleX(-1); /* Lật ngang để giống soi gương */
+        }
 
         /* Header Zalo */
         .zalo-header { position: absolute; top: 0; width: 100%; padding: 40px 15px 15px; background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); display: flex; align-items: center; z-index: 100; }
@@ -38,13 +46,19 @@
 
         /* Bộ điều khiển */
         .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 25px; z-index: 400; }
-        .circle-btn { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 22px; background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); }
+        .circle-btn { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 22px; background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); cursor: pointer; transition: 0.2s; }
         .btn-call { background: #4cd964; width: 65px; height: 65px; font-size: 28px; }
-        .btn-hangup { background: #ff3b30; width: 65px; height: 65px; font-size: 28px; }
+        .btn-hangup { background: var(--danger); width: 65px; height: 65px; font-size: 28px; }
+        
+        /* Màu khi tắt mic/cam */
+        .btn-off { background: var(--danger); color: white; }
 
         /* Cuộc gọi đến */
         #call-overlay { position: fixed; inset: 0; background: #1e3c72; z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         .avatar-lg { width: 120px; height: 120px; background: var(--pink); border-radius: 50%; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px; border: 4px solid rgba(255,255,255,0.2); }
+    
+        /* Chữ thông báo tắt mic/cam trên video */
+        .stream-notice { position: absolute; font-size: 12px; background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 4px; z-index: 15; color: #eee; }
     </style>
 </head>
 <body>
@@ -67,8 +81,15 @@
             </div>
         </div>
 
-        <video id="remote-video" autoplay playsinline></video>
-        <video id="local-video" autoplay muted playsinline></video>
+        <div style="position:relative; width:100%; height:100%">
+            <video id="remote-video" autoplay playsinline></video>
+            <div id="remote-notice" class="stream-notice" style="bottom: 10px; left: 10px; display: none;"></div>
+            
+            <div style="position:relative">
+                <video id="local-video" autoplay muted playsinline></video>
+                <div id="local-notice" class="stream-notice" style="bottom: 25px; right: 25px; display: none;"></div>
+            </div>
+        </div>
 
         <div id="chat-box"></div>
 
@@ -78,9 +99,9 @@
         </div>
 
         <div class="controls">
-            <button class="circle-btn" onclick="toggleMic()">🎙️</button>
+            <button class="circle-btn" id="mic-btn" onclick="toggleMic()">🎙️</button>
             <button class="circle-btn btn-call" id="call-btn" onclick="makeCall()">📞</button>
-            <button class="circle-btn" onclick="toggleCam()">📹</button>
+            <button class="circle-btn" id="cam-btn" onclick="toggleCam()">📹</button>
             <button class="circle-btn btn-hangup" id="hangup-btn" onclick="hangUp()" style="display:none">🛑</button>
         </div>
     </div>
@@ -102,6 +123,7 @@
         let myId, partnerId, peer, localStream, currentCall, dataConn;
         let isPartnerOnline = false;
         let lastOnlineTime = 0;
+        let isMicOn = true, isCamOn = true;
         const ringtone = document.getElementById('ringtone');
 
         function confirmIdentity() {
@@ -133,6 +155,7 @@
                 });
 
                 peer.on('open', id => { 
+                    console.log("ID của tôi:", id);
                     setInterval(checkPartnerStatus, 3000);
                 });
                 
@@ -217,7 +240,22 @@
             dataConn.on('data', data => {
                 if(data.type === 'CHAT') appendMsg(data.text, 'partner');
                 if(data.type === 'END') showEndNotice(data.by);
+                // XỬ LÝ THÔNG BÁO TẮT MIC/CAM TỪ ĐỐI PHƯƠNG
+                if(data.type === 'STATUS_CHANGE') handlePartnerStatusChange(data);
             });
+        }
+
+        function handlePartnerStatusChange(data) {
+            const noticeEl = document.getElementById('remote-notice');
+            const partnerName = (myId === ID_CHI) ? "Bảo Bối" : "Bé Chi";
+            
+            if (data.device === 'mic') {
+                noticeEl.innerText = data.enabled ? "" : `${partnerName} đã tắt Mic`;
+            } else if (data.device === 'cam') {
+                noticeEl.innerText = data.enabled ? "" : `${partnerName} đã tắt Camera`;
+            }
+            
+            noticeEl.style.display = (noticeEl.innerText === "") ? "none" : "block";
         }
 
         function sendMsg() {
@@ -252,8 +290,54 @@
             </div>`;
         }
 
-        function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; }
-        function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; }
+        // SỬA ĐỔI HÀM TẮT/MỞ MIC VỚI BIỂU TƯỢNG VÀ THÔNG BÁO
+        function toggleMic() { 
+            isMicOn = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+            const btn = document.getElementById('mic-btn');
+            const noticeEl = document.getElementById('local-notice');
+            
+            if (isMicOn) {
+                btn.innerText = "🎙️";
+                btn.classList.remove('btn-off');
+                noticeEl.innerText = noticeEl.innerText.replace("Bạn đã tắt Mic", "").trim();
+            } else {
+                btn.innerText = "🔇"; // Biểu tượng gạch chéo
+                btn.classList.add('btn-off'); // Màu đỏ
+                noticeEl.innerText = (noticeEl.innerText + " Bạn đã tắt Mic").trim();
+            }
+            
+            noticeEl.style.display = (noticeEl.innerText === "") ? "none" : "block";
+            
+            // Gửi thông báo cho đối phương
+            if(dataConn && dataConn.open) {
+                dataConn.send({ type: 'STATUS_CHANGE', device: 'mic', enabled: isMicOn });
+            }
+        }
+
+        // SỬA ĐỔI HÀM TẮT/MỞ CAM VỚI BIỂU TƯỢNG VÀ THÔNG BÁO
+        function toggleCam() { 
+            isCamOn = localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
+            const btn = document.getElementById('cam-btn');
+            const noticeEl = document.getElementById('local-notice');
+            
+            if (isCamOn) {
+                btn.innerText = "📹";
+                btn.classList.remove('btn-off');
+                noticeEl.innerText = noticeEl.innerText.replace("Bạn đã tắt Camera", "").trim();
+            } else {
+                btn.innerText = "🚫"; // Biểu tượng gạch chéo
+                btn.classList.add('btn-off'); // Màu đỏ
+                noticeEl.innerText = (noticeEl.innerText + " Bạn đã tắt Camera").trim();
+            }
+            
+            noticeEl.style.display = (noticeEl.innerText === "") ? "none" : "block";
+
+            // Gửi thông báo cho đối phương
+            if(dataConn && dataConn.open) {
+                dataConn.send({ type: 'STATUS_CHANGE', device: 'cam', enabled: isCamOn });
+            }
+        }
+        
         function rejectCall() { ringtone.pause(); document.getElementById('call-overlay').style.display = 'none'; }
     </script>
 </body>
