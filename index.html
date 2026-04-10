@@ -3,46 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> Ứng dụng làm mới đường truyền Viettel Net</title>
+    <title>Ứng dụng làm mới đường truyền Viettel Net</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --zalo-blue: #0068ff; --pink: #ff85a2; --bg: #f0f2f5; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; }
         
-        /* Màn hình nhập ID ban đầu */
         #login-overlay { position: fixed; inset: 0; background: var(--zalo-blue); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         .login-card { background: white; padding: 30px; border-radius: 20px; width: 100%; max-width: 320px; text-align: center; color: #333; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .login-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 10px; text-align: center; font-size: 18px; }
         
-        /* Video Wrapper */
         .main-container { position: relative; width: 100%; height: 100vh; display: none; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; background: #222; }
         #local-video { position: absolute; top: 20px; right: 20px; width: 100px; height: 150px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.8); object-fit: cover; z-index: 10; background: #000; }
 
-        /* Thanh trạng thái Zalo */
         .zalo-header { position: absolute; top: 0; width: 100%; padding: 40px 15px 15px; background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); display: flex; align-items: center; z-index: 100; }
         .back-icon { font-size: 24px; margin-right: 15px; }
 
-        /* Khung Chat giống Zalo */
         #chat-box { position: absolute; bottom: 180px; left: 15px; right: 15px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 200; }
         .msg { padding: 10px 15px; border-radius: 18px; max-width: 75%; font-size: 15px; line-height: 1.4; pointer-events: auto; animation: slideUp 0.3s ease; }
         .msg.partner { background: white; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
         .msg.me { background: var(--zalo-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Ô nhập tin nhắn mờ */
         .input-bar { position: absolute; bottom: 100px; left: 15px; right: 15px; display: flex; align-items: center; background: rgba(255,255,255,0.2); backdrop-filter: blur(15px); padding: 5px 15px; border-radius: 25px; z-index: 300; border: 1px solid rgba(255,255,255,0.3); }
         #chat-input { flex: 1; background: none; border: none; padding: 10px; color: white; font-size: 16px; outline: none; }
         #chat-input::placeholder { color: rgba(255,255,255,0.7); }
 
-        /* Bộ điều khiển tròn chuẩn Zalo */
         .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 25px; z-index: 400; }
         .circle-btn { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 22px; background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); }
         .btn-call { background: #4cd964; width: 65px; height: 65px; font-size: 28px; }
         .btn-hangup { background: #ff3b30; width: 65px; height: 65px; font-size: 28px; }
 
-        /* Giao diện cuộc gọi đến */
         #call-overlay { position: fixed; inset: 0; background: #1e3c72; z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         .avatar-lg { width: 120px; height: 120px; background: var(--pink); border-radius: 50%; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px; border: 4px solid rgba(255,255,255,0.2); }
     </style>
@@ -62,8 +55,8 @@
         <div class="zalo-header">
             <div class="back-icon">❮</div>
             <div>
-                <b id="partner-name-header">Đang chờ kết nối...</b>
-                <div id="status-text" style="font-size: 12px; opacity: 0.8;">Đang trực tuyến</div>
+                <b id="partner-name-header">Đang xác định...</b>
+                <div id="status-text" style="font-size: 12px; opacity: 0.8;">Đang chờ người ấy kết nối...</div>
             </div>
         </div>
 
@@ -100,6 +93,7 @@
         const ID_CHI = "mina_user_1";
         const ID_ANH = "mina_user_2";
         let myId, partnerId, peer, localStream, currentCall, dataConn;
+        let isPartnerOnline = false;
         const ringtone = document.getElementById('ringtone');
 
         function confirmIdentity() {
@@ -130,7 +124,11 @@
                                            { urls: 'turn:213.163.197.199:443', username: 'tunganh', credential: 'mina2026' }] }
                 });
 
-                peer.on('open', id => { console.log("ID của tôi:", id); });
+                peer.on('open', id => { 
+                    console.log("ID của tôi:", id);
+                    // Bắt đầu kiểm tra trạng thái máy đối phương ngay khi Peer mở
+                    setInterval(checkPartnerStatus, 3000);
+                });
                 
                 peer.on('call', call => {
                     currentCall = call;
@@ -146,7 +144,39 @@
             });
         }
 
+        // HÀM KIỂM TRA TRẠNG THÁI ONLINE CHÍNH XÁC
+        function checkPartnerStatus() {
+            if (currentCall) return; // Không kiểm tra khi đang gọi để tránh lag
+
+            const conn = peer.connect(partnerId);
+            conn.on('open', () => {
+                document.getElementById('status-text').innerText = "Đang trực tuyến ❤️";
+                document.getElementById('status-text').style.color = "#4cd964";
+                isPartnerOnline = true;
+                conn.close();
+            });
+
+            conn.on('error', () => {
+                document.getElementById('status-text').innerText = "Đang chờ người ấy kết nối...";
+                document.getElementById('status-text').style.color = "rgba(255,255,255,0.8)";
+                isPartnerOnline = false;
+            });
+            
+            // Timeout để xử lý trường hợp không thấy phản hồi
+            setTimeout(() => {
+                if (conn.open === false) {
+                    document.getElementById('status-text').innerText = "Đang chờ người ấy kết nối...";
+                    document.getElementById('status-text').style.color = "rgba(255,255,255,0.8)";
+                    isPartnerOnline = false;
+                }
+            }, 2000);
+        }
+
         function makeCall() {
+            if (!isPartnerOnline) {
+                alert("Người ấy chưa vào mạng, không thể gọi lúc này!");
+                return;
+            }
             document.getElementById('status-text').innerText = "Đang kết nối...";
             const call = peer.call(partnerId, localStream);
             currentCall = call;
@@ -176,6 +206,7 @@
             document.getElementById('call-btn').style.display = 'none';
             document.getElementById('hangup-btn').style.display = 'flex';
             document.getElementById('status-text').innerText = "Cuộc gọi đang diễn ra";
+            document.getElementById('status-text').style.color = "white";
         }
 
         function setupDataHandlers() {
