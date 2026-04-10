@@ -8,58 +8,63 @@
     <style>
         :root { --neon: #ff007f; --cyan: #00f2ff; --success: #22c55e; --danger: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: #0a0a0a; color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
         #status-bar { background: rgba(255, 165, 0, 0.9); color: #000; text-align: center; font-size: 13px; font-weight: bold; padding: 8px 0; z-index: 100; backdrop-filter: blur(10px); }
         
-        .video-container { position: relative; flex: 1; background: #000; display: flex; align-items: center; justify-content: center; }
+        .video-container { position: relative; flex: 1; background: #111; display: flex; align-items: center; justify-content: center; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
         #local-video { position: absolute; top: 70px; right: 15px; width: 100px; height: 140px; border-radius: 15px; border: 2px solid var(--cyan); object-fit: cover; z-index: 10; box-shadow: 0 0 10px var(--cyan); }
 
-        /* Hiệu ứng tim bay */
-        #heart-btn { position: absolute; bottom: 120px; right: 20px; font-size: 40px; cursor: pointer; z-index: 30; filter: drop-shadow(0 0 10px var(--neon)); user-select: none; }
+        /* Chat & Tim bay */
+        #chat-box { position: absolute; bottom: 120px; left: 15px; width: 220px; z-index: 30; pointer-events: none; }
+        .chat-msg { background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 10px; margin-bottom: 5px; font-size: 13px; border-left: 3px solid var(--cyan); animation: slideIn 0.3s forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+
+        #heart-btn { position: absolute; bottom: 120px; right: 20px; font-size: 45px; cursor: pointer; z-index: 30; filter: drop-shadow(0 0 10px var(--neon)); user-select: none; transition: 0.2s; }
         .heart-icon { position: absolute; color: var(--neon); pointer-events: none; animation: heartFly 1s ease-out forwards; z-index: 50; font-size: 30px; }
-        @keyframes heartFly { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-300px) scale(2); opacity: 0; } }
+        @keyframes heartFly { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-400px) scale(2.5); opacity: 0; } }
 
         #incoming-box { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(20, 20, 20, 0.95); border: 2px solid var(--neon); padding: 30px;
+            background: rgba(20, 20, 20, 0.98); border: 2px solid var(--neon); padding: 30px;
             border-radius: 30px; text-align: center; z-index: 1000; display: none; width: 85%;
-            backdrop-filter: blur(20px); box-shadow: 0 0 50px rgba(255, 0, 127, 0.5);
+            backdrop-filter: blur(20px); box-shadow: 0 0 50px rgba(255, 0, 127, 0.4);
         }
 
-        .info-panel { position: absolute; top: 70px; left: 15px; z-index: 20; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 15px; border: 1px solid var(--cyan); backdrop-filter: blur(5px); }
+        .info-panel { position: absolute; top: 70px; left: 15px; z-index: 20; background: rgba(0,0,0,0.7); padding: 12px; border-radius: 15px; border: 1px solid var(--cyan); backdrop-filter: blur(5px); }
         
         .controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 40; }
-        .btn { width: 60px; height: 60px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: 0.3s; }
+        .btn { width: 60px; height: 60px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
         .btn-call { background: var(--success); color: white; box-shadow: 0 0 15px var(--success); }
         .btn-end { background: var(--danger); color: white; }
         .btn-tool { background: rgba(255,255,255,0.15); color: white; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
-
-        input#peer-id { background: transparent; border: none; border-bottom: 2px solid var(--cyan); color: white; padding: 5px; width: 140px; outline: none; font-size: 18px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div id="status-bar">Đang kết nối hệ thống...</div>
+    <div id="status-bar">Đang kết nối Hotline...</div>
 
     <div id="incoming-box">
-        <div style="font-size: 50px; margin-bottom: 10px; animation: pulse 1s infinite;">📞</div>
-        <h3 style="margin:0">Khách đang gọi...</h3>
-        <p id="caller-name" style="color: var(--cyan); font-size: 18px; margin: 15px 0;">ID: ---</p>
+        <div style="font-size: 50px; margin-bottom: 10px;">📞</div>
+        <h3 style="margin:0">CÓ CUỘC GỌI ĐẾN</h3>
+        <p id="caller-name" style="color: var(--cyan); font-size: 18px; margin: 15px 0;">...</p>
         <div style="display: flex; justify-content: space-around;">
-            <button class="btn btn-call" onclick="answerCall()">✅ NGHE</button>
-            <button class="btn btn-end" onclick="rejectCall()">❌ HUỶ</button>
+            <button class="btn btn-call" onclick="answerCall()">✅</button>
+            <button class="btn btn-end" onclick="rejectCall()">❌</button>
         </div>
     </div>
 
     <div class="info-panel">
-        <div style="font-size: 11px; opacity: 0.8;">HOTLINE CỦA BẠN:</div>
-        <div style="color: var(--cyan); font-weight: bold; font-size: 18px; margin-bottom: 10px;">0559898055</div>
-        <div style="font-size: 11px; opacity: 0.8;">GỌI ĐẾN SỐ KHÁC:</div>
-        <input type="number" id="peer-id" placeholder="Nhập ID...">
+        <div style="font-size: 11px; opacity: 0.8;">VAI TRÒ: <span id="role-text">ĐANG XÁC MINH</span></div>
+        <div id="my-display-id" style="color: var(--cyan); font-weight: bold; font-size: 18px; margin-bottom: 5px;">...</div>
+        <div id="admin-call-zone">
+            <hr style="opacity: 0.2;">
+            <button onclick="callAdmin()" style="background: var(--success); border:none; color:white; padding:10px; border-radius:10px; width:100%; font-weight:bold; cursor:pointer;">GỌI CHO CHỦ TIỆM</button>
+        </div>
     </div>
 
+    <div id="chat-box"></div>
     <div id="heart-btn" onclick="sendHeart()">❤️</div>
 
     <div class="video-container">
@@ -69,20 +74,27 @@
         <div class="controls">
             <button class="btn btn-tool" onclick="toggleMic()">🎙️</button>
             <button class="btn btn-tool" onclick="toggleCam()">📹</button>
-            <button class="btn btn-call" onclick="makeCall()">📞</button>
             <button class="btn btn-end" onclick="endCall()">🛑</button>
         </div>
     </div>
 
-    <audio id="ringtone" loop>
-        <source src="https://www.soundjay.com/phone/phone-calling-1.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="ringtone" loop><source src="https://www.soundjay.com/phone/phone-calling-1.mp3" type="audio/mpeg"></audio>
 
     <script>
-        // CÀI ĐẶT ID MẶC ĐỊNH THEO YÊU CẦU CỦA ANH
-        const MY_FIXED_ID = "0559898055";
+        // LOGIC NHẬN DIỆN /ad CỰC NHANH
+        const path = window.location.pathname;
+        const search = window.location.search;
+        // Chấp nhận cả /ad hoặc ?ad hoặc ?role=admin
+        const isAdmin = path.endsWith('/ad') || search.includes('ad') || search.includes('admin');
         
-        const peer = new Peer(MY_FIXED_ID, {
+        const HOTLINE = "0559898055";
+        const MY_ID = isAdmin ? HOTLINE : Math.floor(100000 + Math.random() * 900000).toString();
+        
+        document.getElementById('role-text').innerText = isAdmin ? "CHỦ TIỆM" : "KHÁCH HÀNG";
+        document.getElementById('my-display-id').innerText = "ID: " + MY_ID;
+        if(isAdmin) document.getElementById('admin-call-zone').style.display = 'none';
+
+        const peer = new Peer(MY_ID, {
             debug: 1,
             config: {
                 'iceServers': [
@@ -101,59 +113,50 @@
         }).then(stream => {
             localStream = stream;
             document.getElementById('local-video').srcObject = stream;
-            document.getElementById('status-bar').innerText = "Hệ thống Sẵn sàng nhận cuộc gọi";
+            document.getElementById('status-bar').innerText = "Hệ thống Sẵn sàng";
             document.getElementById('status-bar').style.background = "#22c55e";
         });
 
-        // Khi có khách gọi đến (Video)
         peer.on('call', call => {
             incomingCallObj = call;
-            document.getElementById('caller-name').innerText = "Khách: " + call.peer;
+            document.getElementById('caller-name').innerText = "Khách ID: " + call.peer;
             document.getElementById('incoming-box').style.display = 'block';
             ringtone.play();
         });
 
-        // Khi có khách kết nối dữ liệu (để Thả tim/Chat)
         peer.on('connection', conn => {
             dataConn = conn;
-            setupDataListeners();
+            setupData();
         });
 
-        function makeCall() {
-            const destId = document.getElementById('peer-id').value;
-            if(!destId) return alert("Vui lòng nhập ID!");
-            
-            // 1. Gọi Video
-            const call = peer.call(destId, localStream);
+        function callAdmin() {
+            const call = peer.call(HOTLINE, localStream);
+            dataConn = peer.connect(HOTLINE);
+            setupData();
             handleStream(call);
-
-            // 2. Kết nối Data để thả tim
-            dataConn = peer.connect(destId);
-            setupDataListeners();
+            document.getElementById('status-bar').innerText = "Đang kết nối Chủ tiệm...";
         }
 
         function answerCall() {
             ringtone.pause();
             document.getElementById('incoming-box').style.display = 'none';
             incomingCallObj.answer(localStream);
-            
-            // Tự động kết nối ngược lại để trao đổi tim/chat
             dataConn = peer.connect(incomingCallObj.peer);
-            setupDataListeners();
-            
+            setupData();
             handleStream(incomingCallObj);
         }
 
         function handleStream(call) {
             call.on('stream', stream => {
                 document.getElementById('remote-video').srcObject = stream;
+                document.getElementById('status-bar').innerText = "Đang đàm thoại";
             });
         }
 
-        // Xử lý dữ liệu Chat/Thả tim
-        function setupDataListeners() {
+        function setupData() {
             dataConn.on('data', data => {
                 if(data === 'HEART') showHeartEffect();
+                else addChat(data);
             });
         }
 
@@ -161,18 +164,22 @@
             if(dataConn && dataConn.open) {
                 dataConn.send('HEART');
                 showHeartEffect();
-            } else {
-                showHeartEffect(); // Vẫn hiện trên máy mình để thử nghiệm
-                console.log("Chưa có kết nối dữ liệu với đối phương");
             }
+        }
+
+        function addChat(msg) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg';
+            div.innerText = msg;
+            document.getElementById('chat-box').appendChild(div);
+            setTimeout(() => div.remove(), 4000);
         }
 
         function showHeartEffect() {
             const heart = document.createElement('div');
             heart.className = 'heart-icon';
             heart.innerHTML = '❤️';
-            heart.style.left = (Math.random() * 60 + 20) + '%';
-            heart.style.top = '70%';
+            heart.style.left = (Math.random() * 50 + 25) + '%';
             document.body.appendChild(heart);
             setTimeout(() => heart.remove(), 1000);
         }
