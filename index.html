@@ -3,215 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mina & Tùng Anh - Kết Nối Riêng Tư</title>
+    <title>Zalo - Kết nối yêu thương</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --glass: rgba(255, 255, 255, 0.2); }
+        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --bg: #f0f2f5; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
+        body { margin: 0; background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; }
         
-        #status-bar { position: absolute; top: 0; width: 100%; padding: 10px; text-align: center; background: rgba(0,0,0,0.6); font-size: 14px; z-index: 100; color: var(--pink); font-weight: bold; }
+        /* Màn hình nhập ID ban đầu */
+        #login-overlay { position: fixed; inset: 0; background: var(--zalo-blue); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { background: white; padding: 30px; border-radius: 20px; width: 100%; max-width: 320px; text-align: center; color: #333; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .login-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 10px; text-align: center; font-size: 18px; }
+        
+        /* Video Wrapper */
+        .main-container { position: relative; width: 100%; height: 100vh; display: none; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #222; }
+        #local-video { position: absolute; top: 20px; right: 20px; width: 100px; height: 150px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.8); object-fit: cover; z-index: 10; background: #000; }
 
-        .video-wrapper { position: relative; width: 100%; height: 100vh; background: #1a1a1a; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { position: absolute; top: 60px; right: 20px; width: 100px; height: 140px; border-radius: 12px; border: 1.5px solid #fff; object-fit: cover; z-index: 10; }
+        /* Thanh trạng thái Zalo */
+        .zalo-header { position: absolute; top: 0; width: 100%; padding: 40px 15px 15px; background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); display: flex; align-items: center; z-index: 100; }
+        .back-icon { font-size: 24px; margin-right: 15px; }
 
-        /* Khung Chat */
-        #chat-container { position: absolute; bottom: 160px; left: 10px; right: 10px; max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 30; }
-        .msg { background: var(--glass); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 18px; max-width: 80%; font-size: 14px; align-self: flex-start; pointer-events: auto; animation: fadeIn 0.3s; border: 1px solid rgba(255,255,255,0.1); }
-        .msg.me { align-self: flex-end; background: var(--zalo-blue); border: none; }
+        /* Khung Chat giống Zalo */
+        #chat-box { position: absolute; bottom: 180px; left: 15px; right: 15px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 200; }
+        .msg { padding: 10px 15px; border-radius: 18px; max-width: 75%; font-size: 15px; line-height: 1.4; pointer-events: auto; animation: slideUp 0.3s ease; }
+        .msg.partner { background: white; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg.me { background: var(--zalo-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Nhập tin nhắn */
-        .input-area { position: absolute; bottom: 100px; left: 15px; right: 15px; display: flex; gap: 10px; z-index: 40; }
-        #chat-input { flex: 1; background: rgba(255,255,255,0.15); border: 1px solid var(--glass); border-radius: 25px; padding: 12px 20px; color: white; outline: none; backdrop-filter: blur(15px); }
+        /* Ô nhập tin nhắn mờ */
+        .input-bar { position: absolute; bottom: 100px; left: 15px; right: 15px; display: flex; align-items: center; background: rgba(255,255,255,0.2); backdrop-filter: blur(15px); padding: 5px 15px; border-radius: 25px; z-index: 300; border: 1px solid rgba(255,255,255,0.3); }
+        #chat-input { flex: 1; background: none; border: none; padding: 10px; color: white; font-size: 16px; outline: none; }
+        #chat-input::placeholder { color: rgba(255,255,255,0.7); }
 
-        /* Bộ điều khiển */
-        .controls { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; justify-content: center; gap: 30px; z-index: 50; }
-        .icon-btn { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; background: rgba(255,255,255,0.2); color: white; transition: 0.3s; }
-        .btn-end { background: #ff3b30; }
-        .btn-main-call { background: #4cd964; width: 65px; height: 65px; font-size: 28px; box-shadow: 0 0 20px rgba(76, 217, 100, 0.5); }
+        /* Bộ điều khiển tròn chuẩn Zalo */
+        .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 25px; z-index: 400; }
+        .circle-btn { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 22px; background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); }
+        .btn-call { background: #4cd964; width: 65px; height: 65px; font-size: 28px; }
+        .btn-hangup { background: #ff3b30; width: 65px; height: 65px; font-size: 28px; }
 
-        /* Màn hình chờ & Cuộc gọi đến */
-        #overlay { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; text-align: center; }
-        #incoming-ui { position: fixed; inset: 0; background: linear-gradient(to bottom, #1e3c72, #2a5298); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 900; }
-        .avatar-circle { width: 110px; height: 110px; background: var(--pink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 50px; margin-bottom: 25px; box-shadow: 0 0 30px rgba(255,133,162,0.4); }
+        /* Giao diện cuộc gọi đến */
+        #call-overlay { position: fixed; inset: 0; background: #1e3c72; z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        .avatar-lg { width: 120px; height: 120px; background: var(--pink); border-radius: 50%; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px; border: 4px solid rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
 
-    <div id="status-bar">Đang khởi tạo kết nối riêng tư...</div>
-
-    <div id="overlay">
-        <div class="avatar-circle">💖</div>
-        <h2 id="welcome-text">Mina OTT <br> Anh Tùng Anh & Bé Chi</h2>
-        <button onclick="initApp()" style="background:var(--zalo-blue); color:white; border:none; padding:15px 45px; border-radius:30px; font-weight:bold; margin-top:20px; cursor:pointer;">BẮT ĐẦU KẾT NỐI</button>
-    </div>
-
-    <div id="incoming-ui">
-        <div class="avatar-circle" id="incoming-avatar">🌸</div>
-        <h2 id="caller-name-ui">ĐANG GỌI CHO BẠN...</h2>
-        <div style="display: flex; gap: 50px; margin-top: 60px;">
-            <div onclick="answerCall()" style="cursor:pointer; text-align:center;">
-                <div class="icon-btn btn-main-call">📞</div>
-                <p>TRẢ LỜI</p>
-            </div>
-            <div onclick="rejectCall()" style="cursor:pointer; text-align:center;">
-                <div class="icon-btn btn-end">✖</div>
-                <p>TỪ CHỐI</p>
-            </div>
+    <div id="login-overlay">
+        <div class="login-card">
+            <h3 style="margin-top:0">Xác nhận danh tính</h3>
+            <p style="font-size:14px; color:#666">Nhập <b>1</b> nếu là Bé Chi <br> Nhập <b>2</b> nếu là Anh Tùng Anh</p>
+            <input type="number" id="user-id-input" placeholder="Nhập số 1 hoặc 2">
+            <button onclick="confirmIdentity()" style="width:100%; padding:12px; background:var(--zalo-blue); color:white; border:none; border-radius:10px; font-weight:bold">VÀO TRÒ CHUYỆN</button>
         </div>
     </div>
 
-    <div class="video-wrapper">
+    <div class="main-container" id="app-ui">
+        <div class="zalo-header">
+            <div class="back-icon">❮</div>
+            <div>
+                <b id="partner-name-header">Đang chờ kết nối...</b>
+                <div id="status-text" style="font-size: 12px; opacity: 0.8;">Đang trực tuyến</div>
+            </div>
+        </div>
+
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay muted playsinline></video>
-        
-        <div id="chat-container"></div>
 
-        <div class="input-area">
-            <input type="text" id="chat-input" placeholder="Nhắn tin cho người ấy..." onkeypress="handleChat(event)">
-            <button onclick="sendChat()" style="background:none; border:none; font-size: 24px; cursor:pointer;">🚀</button>
+        <div id="chat-box"></div>
+
+        <div class="input-bar">
+            <input type="text" id="chat-input" placeholder="Tin nhắn..." onkeypress="if(event.key==='Enter') sendMsg()">
+            <span onclick="sendMsg()" style="font-size:20px; cursor:pointer">🚀</span>
         </div>
 
         <div class="controls">
-            <button class="icon-btn" id="mic-btn" onclick="toggleMic()">🎙️</button>
-            <button class="icon-btn btn-main-call" id="call-trigger-btn" onclick="startCallProcess()">📞</button>
-            <button class="icon-btn" id="cam-btn" onclick="toggleCam()">📹</button>
-            <button class="icon-btn btn-end" onclick="endCall()">🛑</button>
+            <button class="circle-btn" onclick="toggleMic()">🎙️</button>
+            <button class="circle-btn btn-call" id="call-btn" onclick="makeCall()">📞</button>
+            <button class="circle-btn" onclick="toggleCam()">📹</button>
+            <button class="circle-btn btn-hangup" id="hangup-btn" onclick="hangUp()" style="display:none">🛑</button>
         </div>
     </div>
 
-    <audio id="ringtone" loop preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"></audio>
+    <div id="call-overlay">
+        <div class="avatar-lg">🌸</div>
+        <h2 id="caller-name">... đang gọi</h2>
+        <div style="display:flex; gap:60px; margin-top:50px">
+            <div onclick="answerCall()" style="text-align:center"><div class="circle-btn btn-call">📞</div><p>NHẬN</p></div>
+            <div onclick="rejectCall()" style="text-align:center"><div class="circle-btn btn-hangup">✖</div><p>TỪ CHỐI</p></div>
+        </div>
+    </div>
+
+    <audio id="ringtone" loop><source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"></audio>
 
     <script>
-        const ANH = "tunganh_0559898055";
-        const CHI = "bechi_nangu";
-        const isAdmin = window.location.hash === '#ad';
-        const MY_ID = isAdmin ? ANH : CHI;
-        const PARTNER_ID = isAdmin ? CHI : ANH;
-        
-        let peer, localStream, dataConn, currentCall;
+        const ID_CHI = "mina_user_1";
+        const ID_ANH = "mina_user_2";
+        let myId, partnerId, peer, localStream, currentCall, dataConn;
         const ringtone = document.getElementById('ringtone');
 
-        function initApp() {
-            document.getElementById('overlay').style.display = 'none';
-            ringtone.play().then(() => ringtone.pause());
+        function confirmIdentity() {
+            const input = document.getElementById('user-id-input').value;
+            if(input === "1") {
+                myId = ID_CHI; partnerId = ID_ANH;
+                document.getElementById('partner-name-header').innerText = "Anh Tùng Anh ❤️";
+            } else if(input === "2") {
+                myId = ID_ANH; partnerId = ID_CHI;
+                document.getElementById('partner-name-header').innerText = "Bé Chi 🌸";
+            } else {
+                alert("Vui lòng nhập đúng số 1 hoặc 2");
+                return;
+            }
             
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('app-ui').style.display = 'block';
+            startSystem();
+        }
+
+        function startSystem() {
+            navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(stream => {
                 localStream = stream;
                 document.getElementById('local-video').srcObject = stream;
-                startPeer();
-            }).catch(e => alert("Vui lòng cho phép quyền Camera/Mic để gọi"));
-        }
+                
+                peer = new Peer(myId, {
+                    config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' },
+                                           { urls: 'turn:213.163.197.199:443', username: 'tunganh', credential: 'mina2026' }] }
+                });
 
-        function startPeer() {
-            peer = new Peer(MY_ID, {
-                debug: 1,
-                config: {
-                    'iceServers': [{ urls: 'stun:stun.l.google.com:19302' },
-                                   { urls: 'turn:213.163.197.199:443', username: 'tunganh', credential: 'mina2026' }]
-                }
-            });
+                peer.on('open', id => { console.log("ID của tôi:", id); });
+                
+                peer.on('call', call => {
+                    currentCall = call;
+                    document.getElementById('call-overlay').style.display = 'flex';
+                    document.getElementById('caller-name').innerText = (myId === ID_CHI) ? "Anh Tùng Anh đang gọi..." : "Bé Chi đang gọi...";
+                    ringtone.play();
+                });
 
-            peer.on('open', () => {
-                document.getElementById('status-bar').innerText = isAdmin ? "Đang trực Hotline 🌸" : "Đã sẵn sàng gọi cho Anh ❤️";
-                // Nếu là Admin thì ẩn nút gọi đi, đợi khách gọi đến
-                if(isAdmin) document.getElementById('call-trigger-btn').style.visibility = 'hidden';
-                setInterval(checkOnline, 4000);
-            });
-
-            peer.on('call', call => {
-                currentCall = call;
-                document.getElementById('incoming-ui').style.display = 'flex';
-                document.getElementById('caller-name-ui').innerText = isAdmin ? "Bé Chi đang gọi..." : "Anh Tùng Anh đang gọi...";
-                ringtone.play();
-            });
-
-            peer.on('connection', conn => {
-                dataConn = conn;
-                setupDataHandlers();
+                peer.on('connection', conn => {
+                    dataConn = conn;
+                    setupDataHandlers();
+                });
             });
         }
 
-        function checkOnline() {
-            const conn = peer.connect(PARTNER_ID);
-            conn.on('open', () => {
-                document.getElementById('status-bar').innerText = "Người ấy đang Online ❤️";
-                conn.close();
-            });
-        }
-
-        function startCallProcess() {
-            document.getElementById('status-bar').innerText = "Đang kết nối...";
-            const call = peer.call(PARTNER_ID, localStream);
+        function makeCall() {
+            document.getElementById('status-text').innerText = "Đang kết nối...";
+            const call = peer.call(partnerId, localStream);
             currentCall = call;
-            dataConn = peer.connect(PARTNER_ID);
+            dataConn = peer.connect(partnerId);
             setupDataHandlers();
+            
             call.on('stream', stream => {
                 document.getElementById('remote-video').srcObject = stream;
-                document.getElementById('status-bar').innerText = "Đang trong cuộc gọi ❤️";
+                onCallConnected();
             });
         }
 
         function answerCall() {
             ringtone.pause();
-            document.getElementById('incoming-ui').style.display = 'none';
+            document.getElementById('call-overlay').style.display = 'none';
             currentCall.answer(localStream);
             dataConn = peer.connect(currentCall.peer);
             setupDataHandlers();
+            
             currentCall.on('stream', stream => {
                 document.getElementById('remote-video').srcObject = stream;
+                onCallConnected();
             });
+        }
+
+        function onCallConnected() {
+            document.getElementById('call-btn').style.display = 'none';
+            document.getElementById('hangup-btn').style.display = 'flex';
+            document.getElementById('status-text').innerText = "Cuộc gọi đang diễn ra";
         }
 
         function setupDataHandlers() {
             dataConn.on('data', data => {
-                if (data.type === 'CHAT') appendMsg(data.text, false);
-                if (data.type === 'END') showEndScreen(data.sender);
+                if(data.type === 'CHAT') appendMsg(data.text, 'partner');
+                if(data.type === 'END') showEndNotice(data.by);
             });
         }
 
-        function handleChat(e) { if(e.key === 'Enter') sendChat(); }
-        function sendChat() {
+        function sendMsg() {
             const input = document.getElementById('chat-input');
-            if (input.value.trim() && dataConn && dataConn.open) {
+            if(input.value.trim() && dataConn && dataConn.open) {
                 dataConn.send({ type: 'CHAT', text: input.value });
-                appendMsg(input.value, true);
+                appendMsg(input.value, 'me');
                 input.value = '';
             }
         }
 
-        function appendMsg(text, isMe) {
-            const container = document.getElementById('chat-container');
+        function appendMsg(text, type) {
+            const box = document.getElementById('chat-box');
             const div = document.createElement('div');
-            div.className = `msg ${isMe ? 'me' : ''}`;
+            div.className = `msg ${type}`;
             div.innerText = text;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-            if(!isMe) setTimeout(() => div.style.opacity = '0.5', 8000);
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+            if(type === 'partner') setTimeout(() => div.style.opacity = '0.6', 10000);
         }
 
-        function endCall() {
-            const name = isAdmin ? "Anh Tùng Anh" : "Bé Chi";
-            if(dataConn) dataConn.send({ type: 'END', sender: name });
-            showEndScreen("Bạn");
+        function hangUp() {
+            const myName = (myId === ID_ANH) ? "Anh Tùng Anh" : "Bé Chi";
+            if(dataConn) dataConn.send({ type: 'END', by: myName });
+            showEndNotice("Bạn");
         }
 
-        function showEndScreen(who) {
-            document.getElementById('overlay').style.display = 'flex';
-            document.getElementById('welcome-text').innerHTML = `<span style="color:var(--pink); font-size:20px;">${who} đã kết thúc cuộc gọi</span>`;
-            setTimeout(() => location.reload(), 3000);
+        function showEndNotice(who) {
+            document.body.innerHTML = `<div style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:white; text-align:center;">
+                <h2 style="color:var(--pink)">${who} đã kết thúc cuộc gọi</h2>
+                <button onclick="location.reload()" style="padding:12px 30px; border-radius:20px; border:none; background:var(--zalo-blue); color:white; font-weight:bold; margin-top:20px">QUAY LẠI</button>
+            </div>`;
         }
 
-        function toggleMic() { 
-            const active = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-            document.getElementById('mic-btn').innerText = active ? "🎙️" : "🔇";
-        }
-        function toggleCam() { 
-            const active = localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-            document.getElementById('cam-btn').innerText = active ? "📹" : "🚫";
-        }
-        function rejectCall() { ringtone.pause(); document.getElementById('incoming-ui').style.display = 'none'; }
+        function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; }
+        function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; }
+        function rejectCall() { ringtone.pause(); document.getElementById('call-overlay').style.display = 'none'; }
     </script>
 </body>
 </html>
