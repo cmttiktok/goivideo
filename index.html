@@ -63,7 +63,7 @@
             <div onclick="rejectCall()" style="text-align:center"><div class="circle-btn btn-hangup">✖</div><p>TỪ CHỐI</p></div>
         </div>
         <div id="outgoing-actions" style="display: flex; justify-content: center; width: 100%;">
-            <div onclick="location.reload()" style="text-align:center"><div class="circle-btn btn-hangup">✖</div><p>HỦY</p></div>
+            <div onclick="cancelCall()" style="text-align:center"><div class="circle-btn btn-hangup">✖</div><p>HỦY</p></div>
         </div>
     </div>
 
@@ -92,15 +92,12 @@
         </div>
     </div>
 
-    <audio id="ringtone" loop><source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"></audio>
-
     <script>
         const ID_CHI = "mina_user_1"; const ID_ANH = "mina_user_2";
         let myId, partnerId, peer, localStream, currentCall, dataConn;
         let isPartnerOnline = false, lastOnlineTime = 0;
         let isMicOn = true, isCamOn = true, currentFacingMode = "user";
         let partnerMicOn = true, partnerCamOn = true;
-        const ringtone = document.getElementById('ringtone');
 
         function confirmIdentity() {
             const input = document.getElementById('user-id-input').value;
@@ -121,8 +118,17 @@
         function initPeer() {
             peer = new Peer(myId, { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'turn:213.163.197.199:443', username: 'tunganh', credential: 'mina2026' }] } });
             peer.on('open', () => setInterval(checkPartnerStatus, 3000));
-            peer.on('call', call => { currentCall = call; document.getElementById('call-ui-overlay').style.display = 'flex'; document.getElementById('incoming-actions').style.display = 'flex'; document.getElementById('outgoing-actions').style.display = 'none'; document.getElementById('call-status-text').innerText = "Cuộc gọi đến..."; ringtone.play(); });
-            peer.on('connection', conn => { dataConn = conn; setupDataHandlers(); });
+            peer.on('call', call => { 
+                currentCall = call; 
+                document.getElementById('call-ui-overlay').style.display = 'flex'; 
+                document.getElementById('incoming-actions').style.display = 'flex'; 
+                document.getElementById('outgoing-actions').style.display = 'none'; 
+                document.getElementById('call-status-text').innerText = "Cuộc gọi đến..."; 
+            });
+            peer.on('connection', conn => { 
+                dataConn = conn; 
+                setupDataHandlers(); 
+            });
         }
 
         function checkPartnerStatus() {
@@ -130,7 +136,10 @@
             const conn = peer.connect(partnerId, { reliable: false });
             conn.on('open', () => { 
                 lastOnlineTime = Date.now(); 
-                if(!dataConn || !dataConn.open) { dataConn = peer.connect(partnerId); setupDataHandlers(); }
+                if(!dataConn || !dataConn.open) { 
+                    dataConn = peer.connect(partnerId); 
+                    setupDataHandlers(); 
+                }
                 updateUIStatus(true); 
                 conn.close(); 
             });
@@ -145,7 +154,7 @@
         }
 
         function makeCall() {
-            if (!isPartnerOnline) { alert("Người ấy chưa online!"); return; }
+            if (!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
             document.getElementById('call-ui-overlay').style.display = 'flex';
             document.getElementById('incoming-actions').style.display = 'none';
             document.getElementById('outgoing-actions').style.display = 'flex';
@@ -154,10 +163,18 @@
             setupCall(call);
         }
 
-        function answerCall() { ringtone.pause(); document.getElementById('call-ui-overlay').style.display = 'none'; currentCall.answer(localStream); setupCall(currentCall); }
+        function cancelCall() {
+            if(dataConn) dataConn.send({type: 'CANCEL'});
+            location.reload();
+        }
+
+        function answerCall() { 
+            document.getElementById('call-ui-overlay').style.display = 'none'; 
+            currentCall.answer(localStream); 
+            setupCall(currentCall); 
+        }
         
         function rejectCall() { 
-            ringtone.pause(); 
             if(dataConn) dataConn.send({type: 'BUSY'});
             document.getElementById('call-ui-overlay').style.display = 'none'; 
         }
@@ -178,6 +195,7 @@
             dataConn.on('data', data => {
                 if(data.type === 'CHAT') appendMsg(data.text, 'partner');
                 if(data.type === 'END') location.reload();
+                if(data.type === 'CANCEL') { document.getElementById('call-ui-overlay').style.display = 'none'; }
                 if(data.type === 'BUSY') { alert("Người ấy đang bận!"); location.reload(); }
                 if(data.type === 'STATUS') {
                     if(data.device === 'mic') partnerMicOn = data.on;
