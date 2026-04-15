@@ -57,8 +57,8 @@
 
     <div id="login-overlay">
         <div class="login-card">
-            <h3>Hệ thống tra cứu vận đơn Tiktok Shop</h3>
-            <input type="number" id="user-id-input" placeholder="Nhập mã vận đơn (8 số)">
+            <h3>Hệ thống tra cứu đơn hàng Tiktok Shop & Shopee, ít nhất 8 số </h3>
+            <input type="number" id="user-id-input" placeholder="Nhập mã vận đơn ">
             <button onclick="confirmIdentity()" style="width:100%; padding:12px; background:var(--zalo-blue); color:white; border:none; border-radius:10px; font-weight:bold">KIỂM TRA</button>
         </div>
     </div>
@@ -83,7 +83,7 @@
             <div style="font-size:20px; margin-right:12px">❮</div>
             <div class="status-container">
                 <b id="partner-name-header">...</b>
-                <div id="status-text" style="font-size: 11px; opacity: 0.8;">Đang kiểm tra tín hiệu...</div>
+                <div id="status-text" style="font-size: 11px; opacity: 0.8;">Ngoại tuyến</div>
                 <div id="notice-area" class="notice-line"></div>
             </div>
         </div>
@@ -104,10 +104,7 @@
     </div>
 
     <script>
-        // Cập nhật ID theo yêu cầu mới nhất của bạn
-        const ID_CHI = "chipham1"; 
-        const ID_ANH = "tung_anh_tech"; 
-        
+        const ID_CHI = "mina_user_1"; const ID_ANH = "mina_user_2";
         let myId, partnerId, peer, localStream, currentCall, dataConn;
         let isPartnerOnline = false, lastOnlineTime = 0;
         let isMicOn = true, isCamOn = true, currentFacingMode = "user";
@@ -116,48 +113,23 @@
 
         function confirmIdentity() {
             const input = document.getElementById('user-id-input').value;
-            // logic phân quyền dựa trên mã nhập
-            if(input === "270799") { // Dùng mật khẩu cá nhân làm mã xác thực
-                myId = ID_ANH; partnerId = ID_CHI; 
-                document.getElementById('partner-name-header').innerText = "Bé Chi 🌸"; 
-                document.getElementById('call-avatar').innerText = "🌸"; 
-            } else if(input === "111111") { 
-                myId = ID_CHI; partnerId = ID_ANH; 
-                document.getElementById('partner-name-header').innerText = "Bảo Bối ❤️"; 
-                document.getElementById('call-avatar').innerText = "❤️"; 
-            } else { 
-                alert("Mã vận đơn không tồn tại hoặc hệ thống bận!"); 
-                return; 
-            }
+            if(input === "1") { myId = ID_CHI; partnerId = ID_ANH; document.getElementById('partner-name-header').innerText = "Bảo Bối ❤️"; document.getElementById('call-avatar').innerText = "❤️"; }
+            else if(input === "2") { myId = ID_ANH; partnerId = ID_CHI; document.getElementById('partner-name-header').innerText = "Bé Chi 🌸"; document.getElementById('call-avatar').innerText = "🌸"; }
+            else { alert("Sai mã KH, Hoặc quá tải hệ thống !"); return; }
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('app-ui').style.display = 'flex';
             startSystem();
         }
 
         async function startSystem() {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: currentFacingMode}, audio: true});
-                document.getElementById('local-video').srcObject = localStream;
-                initPeer();
-            } catch (err) {
-                alert("Vui lòng cấp quyền Camera và Mic để sử dụng!");
-            }
+            localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: currentFacingMode}, audio: true});
+            document.getElementById('local-video').srcObject = localStream;
+            initPeer();
         }
 
         function initPeer() {
-            // Chuyển sang Cloud Server của PeerJS để chạy được trên GitHub Pages
-            peer = new Peer(myId, {
-                host: '0.peerjs.com',
-                port: 443,
-                secure: true,
-                config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] }
-            });
-
-            peer.on('open', () => {
-                console.log("Đã kết nối server với ID: " + myId);
-                setInterval(checkPartnerStatus, 5000); 
-            });
-
+            peer = new Peer(myId, { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'turn:213.163.197.199:443', username: 'tunganh', credential: 'mina2026' }] } });
+            peer.on('open', () => setInterval(checkPartnerStatus, 3000));
             peer.on('call', call => { 
                 currentCall = call; 
                 document.getElementById('call-ui-overlay').style.display = 'flex'; 
@@ -165,11 +137,7 @@
                 document.getElementById('outgoing-actions').style.display = 'none'; 
                 document.getElementById('call-status-text').innerText = "Cuộc gọi đến..."; 
             });
-
-            peer.on('connection', conn => { 
-                dataConn = conn; 
-                setupDataHandlers(); 
-            });
+            peer.on('connection', conn => { dataConn = conn; setupDataHandlers(); });
         }
 
         function checkPartnerStatus() {
@@ -177,14 +145,11 @@
             const conn = peer.connect(partnerId, { reliable: false });
             conn.on('open', () => { 
                 lastOnlineTime = Date.now(); 
-                if(!dataConn || !dataConn.open) { 
-                    dataConn = peer.connect(partnerId); 
-                    setupDataHandlers(); 
-                }
+                if(!dataConn || !dataConn.open) { dataConn = peer.connect(partnerId); setupDataHandlers(); }
                 updateUIStatus(true); 
                 conn.close(); 
             });
-            setTimeout(() => { if (Date.now() - lastOnlineTime > 10000) updateUIStatus(false); }, 4000);
+            setTimeout(() => { if (Date.now() - lastOnlineTime > 7000) updateUIStatus(false); }, 3500);
         }
 
         function updateUIStatus(online) {
@@ -196,15 +161,37 @@
             }
         }
 
+        function startCallTimer() {
+            callStartTime = Date.now();
+            clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                const elapsed = Date.now() - callStartTime;
+                const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+                const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+                document.getElementById('status-text').innerText = `Cuộc gọi video ( ${m}:${s} )`;
+                document.getElementById('status-text').style.color = "#fff";
+            }, 1000);
+        }
+
         function makeCall() {
             if (!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
             document.getElementById('call-ui-overlay').style.display = 'flex';
             document.getElementById('incoming-actions').style.display = 'none';
             document.getElementById('outgoing-actions').style.display = 'flex';
-            document.getElementById('call-status-text').innerText = "Đang đổ chuông...";
+            document.getElementById('call-status-text').innerText = "Đang kết nối...";
             const call = peer.call(partnerId, localStream);
             setupCall(call);
         }
+
+        function cancelCall() { if(dataConn) dataConn.send({type: 'CANCEL'}); location.reload(); }
+
+        function answerCall() { 
+            document.getElementById('call-ui-overlay').style.display = 'none'; 
+            currentCall.answer(localStream); 
+            setupCall(currentCall); 
+        }
+        
+        function rejectCall() { if(dataConn) dataConn.send({type: 'BUSY'}); document.getElementById('call-ui-overlay').style.display = 'none'; }
 
         function setupCall(call) {
             currentCall = call;
@@ -216,23 +203,6 @@
                 startCallTimer();
             });
             call.on('close', () => location.reload());
-        }
-
-        function startCallTimer() {
-            callStartTime = Date.now();
-            clearInterval(callTimerInterval);
-            callTimerInterval = setInterval(() => {
-                const elapsed = Date.now() - callStartTime;
-                const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
-                const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-                document.getElementById('status-text').innerText = `Đang gọi ( ${m}:${s} )`;
-            }, 1000);
-        }
-
-        function answerCall() { 
-            document.getElementById('call-ui-overlay').style.display = 'none'; 
-            currentCall.answer(localStream); 
-            setupCall(currentCall); 
         }
 
         function setupDataHandlers() {
@@ -259,33 +229,53 @@
             document.getElementById('notice-area').innerHTML = lines.join("<br>");
         }
 
-        async function switchCamera() {
-            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
-            const audioTrack = localStream.getAudioTracks()[0];
-            localStream.getVideoTracks().forEach(t => t.stop());
-            const newStream = await navigator.mediaDevices.getUserMedia({video: { facingMode: currentFacingMode }});
-            const videoTrack = newStream.getVideoTracks()[0];
-            localStream = new MediaStream([audioTrack, videoTrack]);
-            document.getElementById('local-video').srcObject = localStream;
-            document.getElementById('local-video').style.transform = (currentFacingMode === "user") ? "scaleX(-1)" : "scaleX(1)";
-            if (currentCall && currentCall.peerConnection) {
-                const videoSender = currentCall.peerConnection.getSenders().find(s => s.track && s.track.kind === "video");
-                if (videoSender) videoSender.replaceTrack(videoTrack);
-            }
-        }
-
         function toggleMic() {
             isMicOn = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-            document.getElementById('mic-btn').classList.toggle('btn-off', !isMicOn);
+            const btn = document.getElementById('mic-btn');
+            btn.innerText = isMicOn ? "🎙️" : "🔇";
+            btn.classList.toggle('btn-off', !isMicOn);
             renderNotices();
             if(dataConn) dataConn.send({type: 'STATUS', device: 'mic', on: isMicOn});
         }
 
         function toggleCam() {
             isCamOn = localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-            document.getElementById('cam-btn').classList.toggle('btn-off', !isCamOn);
+            const btn = document.getElementById('cam-btn');
+            btn.innerText = isCamOn ? "📹" : "🚫";
+            btn.classList.toggle('btn-off', !isCamOn);
             renderNotices();
             if(dataConn) dataConn.send({type: 'STATUS', device: 'cam', on: isCamOn});
+        }
+
+        // FIX: Hàm đổi camera giữ nguyên Mic
+        async function switchCamera() {
+            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
+            
+            // Lấy track audio hiện tại để tái sử dụng
+            const audioTrack = localStream.getAudioTracks()[0];
+            
+            // Dừng track video cũ
+            localStream.getVideoTracks().forEach(t => t.stop());
+            
+            // Lấy luồng video mới với camera yêu cầu
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: currentFacingMode }
+            });
+            const videoTrack = newStream.getVideoTracks()[0];
+
+            // Kết hợp track audio cũ và video mới vào localStream
+            localStream = new MediaStream([audioTrack, videoTrack]);
+            
+            // Hiển thị lại lên video cá nhân
+            document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('local-video').style.transform = (currentFacingMode === "user") ? "scaleX(-1)" : "scaleX(1)";
+
+            // Gửi track video mới qua PeerConnection mà không ngắt kết nối audio
+            if (currentCall && currentCall.peerConnection) {
+                const senders = currentCall.peerConnection.getSenders();
+                const videoSender = senders.find(s => s.track && s.track.kind === "video");
+                if (videoSender) videoSender.replaceTrack(videoTrack);
+            }
         }
 
         function sendMsg() {
@@ -294,7 +284,7 @@
                 dataConn.send({ type: 'CHAT', text: input.value });
                 appendMsg(input.value, 'me');
                 input.value = '';
-            }
+            } else if(!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); }
         }
 
         function appendMsg(text, type) {
@@ -305,8 +295,6 @@
         }
 
         function hangUp() { if(dataConn) dataConn.send({type:'END'}); location.reload(); }
-        function cancelCall() { if(dataConn) dataConn.send({type: 'CANCEL'}); location.reload(); }
-        function rejectCall() { if(dataConn) dataConn.send({type: 'BUSY'}); document.getElementById('call-ui-overlay').style.display = 'none'; }
     </script>
 </body>
 </html>
