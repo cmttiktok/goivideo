@@ -116,6 +116,32 @@
     </div>
 
     <script>
+        // ==========================================
+        // 🚀 ĐOẠN ĐĂNG KÝ SERVICE WORKER & PWA TỰ ĐỘNG
+        // ==========================================
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/service-worker.js')
+                .then(function(registration) {
+                    console.log('Service Worker đã đăng ký thành công với scope: ', registration.scope);
+                }, function(err) {
+                    console.log('Đăng ký Service Worker thất bại: ', err);
+                });
+            });
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+            return outputArray;
+        }
+
+        // ==========================================
+        // KHỞI TẠO CÁC BIẾN HỆ THỐNG GỐC
+        // ==========================================
         const ID_CHI = "mina_user_1"; const ID_ANH = "mina_user_2";
         let myId, partnerId, peer, localStream, currentCall, dataConn;
         let isPartnerOnline = false, lastOnlineTime = 0;
@@ -123,14 +149,42 @@
         let partnerMicOn = true, partnerCamOn = true;
         let callStartTime, callTimerInterval, startX = 0;
 
-        function confirmIdentity() {
+        // Cập nhật hàm login để xin quyền Notification và gửi Token lên lưu ở Server
+        async function confirmIdentity() {
             const input = document.getElementById('user-id-input').value;
             if(input === "1") { myId = ID_CHI; partnerId = ID_ANH; document.getElementById('partner-name-header').innerText = "Anh ❤️"; document.getElementById('call-avatar').innerText = "❤️"; }
             else if(input === "2") { myId = ID_ANH; partnerId = ID_CHI; document.getElementById('partner-name-header').innerText = "Bé Chi 🌸"; document.getElementById('call-avatar').innerText = "🌸"; }
             else { alert("Sai mã KH, Hoặc quá tải hệ thống !"); return; }
+            
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('app-ui').style.display = 'flex';
-            startSystem();
+            
+            await startSystem();
+
+            // Xin quyền thông báo và tự động đăng ký kênh đẩy dữ liệu ngầm
+            if (Notification.permission !== 'granted') {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') { setupPushSubscription(); }
+            } else {
+                setupPushSubscription();
+            }
+        }
+
+        function setupPushSubscription() {
+            navigator.serviceWorker.ready.then(function(registration) {
+                const publicKey = 'BJ0_l8D_jD4qXvC8VzP0DEX-8W9XW_9vO27pU6X2mB_D3N3oD3K9N3mO2_R3vX3oD_D3N3oD3K9N3mO27pU6Xw';
+                registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicKey)
+                })
+                .then(function(subscription) {
+                    fetch('/api/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: myId, subscription: subscription })
+                    });
+                }).catch(err => console.error('Không thể đăng ký kênh Push ngầm:', err));
+            });
         }
 
         async function startSystem() {
@@ -189,12 +243,24 @@
             }, 1000);
         }
 
+        // Cập nhật hàm makeCall để chủ động gửi request Push đánh thức máy nhận cuộc gọi
         function makeCall() {
-            if (!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
+            const myName = (myId === ID_CHI) ? "Bé Chi 🌸" : "Anh ❤️";
+
             document.getElementById('call-ui-overlay').style.display = 'flex';
             document.getElementById('incoming-actions').style.display = 'none';
             document.getElementById('outgoing-actions').style.display = 'flex';
-            document.getElementById('call-status-text').innerText = "Đang kết nối...";
+            document.getElementById('call-status-text').innerText = "Đang đổ chuông từ xa...";
+
+            // Bắn tín hiệu gọi thức tỉnh qua Server PWA
+            fetch('/api/trigger-call', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partnerId: partnerId, callerName: myName })
+            }).then(res => {
+                if(!res.ok) console.log("Đối phương đang hoàn toàn offline hoặc chưa đăng ký thông báo.");
+            });
+
             const call = peer.call(partnerId, localStream);
             setupCall(call);
         }
